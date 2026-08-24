@@ -9,6 +9,13 @@
 namespace HandwritingOCR {
 
 AppController::AppController(QObject* parent) : QObject(parent) {
+    // Connect Mobile Upload to Automatic Import & Navigation
+    connect(&LanUploadService::instance(), &LanUploadService::imagesUploaded, this, [this](const QStringList& tempFilePaths) {
+        Logger::instance().info("AppController", QString("Received %1 images from mobile upload, importing into task...").arg(tempFilePaths.size()));
+        importFilePaths(tempFilePaths);
+        emit navigateToProofreading();
+    });
+
     // Forward signals to notifyUser
     connect(&TaskService::instance(), &TaskService::taskError, this, [this](const QString& msg) {
         emit notifyUser(msg, "error");

@@ -52,6 +52,7 @@ public:
 
 signals:
     void notifyUser(const QString& message, const QString& type = "info");
+    void navigateToProofreading();
 };
 
 } // namespace HandwritingOCR

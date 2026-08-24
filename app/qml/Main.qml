@@ -236,6 +236,10 @@ ApplicationWindow {
         function onNotifyUser(msg, type) {
             toast.show(msg, type);
         }
+        function onNavigateToProofreading() {
+            qrCodeDialog.close();
+            window.currentView = "proofread";
+        }
     }
 
     // Dialog Instances
