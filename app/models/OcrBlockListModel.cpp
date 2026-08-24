@@ -32,6 +32,8 @@ QVariant OcrBlockListModel::data(const QModelIndex& index, int role) const {
         case IsHandwritingRole:    return block.isHandwriting();
         case IsLowConfidenceRole:  return block.isLowConfidence(m_threshold);
         case IsSelectedRole:       return index.row() == m_selectedIndex;
+        case CharStartRole:        return block.charStart;
+        case CharEndRole:          return block.charEnd;
         default:                   return QVariant();
     }
 }
@@ -54,12 +56,24 @@ QHash<int, QByteArray> OcrBlockListModel::roleNames() const {
     roles[IsHandwritingRole] = "isHandwriting";
     roles[IsLowConfidenceRole] = "isLowConfidence";
     roles[IsSelectedRole] = "isSelected";
+    roles[CharStartRole] = "charStart";
+    roles[CharEndRole] = "charEnd";
     return roles;
 }
 
 void OcrBlockListModel::setBlocks(const QVector<OcrBlock>& blocks) {
     beginResetModel();
     m_blocks = blocks;
+
+    int offset = 0;
+    for (auto& b : m_blocks) {
+        if (b.charStart < 0) {
+            b.charStart = offset;
+            b.charEnd = offset + b.text.length();
+            offset += b.text.length() + 1;
+        }
+    }
+
     m_selectedIndex = -1;
     endResetModel();
     emit selectedIndexChanged();
@@ -134,6 +148,93 @@ int OcrBlockListModel::findPreviousLowConfidenceIndex(int startIndex) const {
     return -1;
 }
 
+int OcrBlockListModel::findBlockIndexByCharOffset(int charOffset) const {
+    return findBlockIndexForCursor(charOffset, QString());
+}
+
+int OcrBlockListModel::findBlockIndexForCursor(int charOffset, const QString& currentText) const {
+    if (m_blocks.isEmpty()) return -1;
+    if (charOffset < 0) charOffset = 0;
+
+    // 1. Line content semantic matching (handles user editing, modifications, newlines)
+    if (!currentText.isEmpty()) {
+        int effectivePos = qMin(charOffset, currentText.length());
+        int lineStart = (effectivePos > 0) ? currentText.lastIndexOf('\n', effectivePos - 1) : -1;
+        lineStart = (lineStart == -1) ? 0 : lineStart + 1;
+        int lineEnd = currentText.indexOf('\n', effectivePos);
+        lineEnd = (lineEnd == -1) ? currentText.length() : lineEnd;
+
+        QString lineText = currentText.mid(lineStart, lineEnd - lineStart).trimmed();
+        if (lineText.length() >= 2) {
+            int bestIdx = -1;
+            int maxScore = 0;
+
+            for (int i = 0; i < m_blocks.size(); ++i) {
+                const QString& bText = m_blocks[i].text.trimmed();
+                if (bText.isEmpty()) continue;
+
+                if (lineText == bText) {
+                    return i; // Exact full line match
+                }
+                if (lineText.contains(bText)) {
+                    int score = bText.length() * 2;
+                    if (score > maxScore) {
+                        maxScore = score;
+                        bestIdx = i;
+                    }
+                } else if (bText.contains(lineText)) {
+                    int score = lineText.length() * 2;
+                    if (score > maxScore) {
+                        maxScore = score;
+                        bestIdx = i;
+                    }
+                }
+            }
+            if (bestIdx != -1) {
+                return bestIdx;
+            }
+        }
+    }
+
+    // 2. Character offset range matching
+    for (int i = 0; i < m_blocks.size(); ++i) {
+        const auto& b = m_blocks[i];
+        if (b.charStart >= 0 && b.charEnd >= b.charStart) {
+            if (charOffset >= b.charStart && charOffset <= b.charEnd) {
+                return i;
+            }
+        }
+    }
+
+    // 3. Preceding block fallback
+    for (int i = m_blocks.size() - 1; i >= 0; --i) {
+        const auto& b = m_blocks[i];
+        if (b.charStart >= 0 && charOffset >= b.charStart) {
+            return i;
+        }
+    }
+
+    return 0;
+}
+
+int OcrBlockListModel::getCharStart(int index) const {
+    if (index >= 0 && index < m_blocks.size()) {
+        return m_blocks[index].charStart;
+    }
+    return -1;
+}
+
+int OcrBlockListModel::getCharLength(int index) const {
+    if (index >= 0 && index < m_blocks.size()) {
+        const auto& b = m_blocks[index];
+        if (b.charEnd >= b.charStart && b.charStart >= 0) {
+            return b.charEnd - b.charStart;
+        }
+        return b.text.length();
+    }
+    return 0;
+}
+
 QVariantMap OcrBlockListModel::getBlockMap(int index) const {
     QVariantMap map;
     if (index >= 0 && index < m_blocks.size()) {
@@ -147,6 +248,8 @@ QVariantMap OcrBlockListModel::getBlockMap(int index) const {
         map["bboxHeight"] = b.bbox.height;
         map["lineIndex"] = b.lineIndex;
         map["blockIndex"] = b.blockIndex;
+        map["charStart"] = b.charStart;
+        map["charEnd"] = b.charEnd;
         map["isLowConfidence"] = b.isLowConfidence(m_threshold);
     }
     return map;

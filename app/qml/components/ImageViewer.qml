@@ -1,51 +1,62 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 
 Item {
     id: root
 
-    property string imageSource: ""
     property string imagePath: ""
     property var blockModel: null
     property int selectedIndex: blockModel ? blockModel.selectedIndex : -1
+    property int imageRotation: 0
 
-    signal blockClicked(int index, var blockData)
+    signal blockClicked(int index, var block)
 
-    clip: true
-
+    // Dark Slate canvas background
     Rectangle {
         anchors.fill: parent
-        color: "#0f172a" // Sleek dark slate
+        color: "#0f172a"
     }
 
     Flickable {
         id: flickable
         anchors.fill: parent
-        contentWidth: container.width
-        contentHeight: container.height
-        boundsBehavior: Flickable.StopAtBounds
+        contentWidth: Math.max(container.width, width)
+        contentHeight: Math.max(container.height, height)
         clip: true
+        interactive: true
+        boundsBehavior: Flickable.StopAtBounds
+
+        NumberAnimation { id: animContentX; target: flickable; property: "contentX"; duration: 240; easing.type: Easing.OutCubic }
+        NumberAnimation { id: animContentY; target: flickable; property: "contentY"; duration: 240; easing.type: Easing.OutCubic }
 
         Item {
             id: container
-            width: Math.max(flickable.width, (imageItem.implicitWidth > 0 ? imageItem.implicitWidth * currentScale : 800) + 100)
-            height: Math.max(flickable.height, (imageItem.implicitHeight > 0 ? imageItem.implicitHeight * currentScale : 1000) + 100)
+            width: Math.max(imageWrapper.width * root.currentScale, flickable.width)
+            height: Math.max(imageWrapper.height * root.currentScale, flickable.height)
 
             Item {
                 id: imageWrapper
-                width: imageItem.implicitWidth > 0 ? imageItem.implicitWidth * currentScale : 800
-                height: imageItem.implicitHeight > 0 ? imageItem.implicitHeight * currentScale : 1000
-                anchors.centerIn: parent
+                width: imageItem.implicitWidth > 0 ? imageItem.implicitWidth : 800
+                height: imageItem.implicitHeight > 0 ? imageItem.implicitHeight : 600
+                scale: root.currentScale
+                transformOrigin: Item.TopLeft
+                x: Math.max(0, (container.width - width * root.currentScale) / 2)
+                y: Math.max(0, (container.height - height * root.currentScale) / 2)
 
                 Image {
                     id: imageItem
                     anchors.fill: parent
-                    source: (root.imagePath !== "" ? root.imagePath : root.imageSource) ? app.localFileToUrl(root.imagePath !== "" ? root.imagePath : root.imageSource) : ""
+                    source: root.imagePath ? app.localFileToUrl(root.imagePath) : ""
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
-                    cache: true
                     smooth: true
                     mipmap: true
+                    rotation: root.imageRotation
+
+                    Behavior on rotation {
+                        NumberAnimation { duration: 200; easing.type: Easing.OutQuad }
+                    }
 
                     onStatusChanged: {
                         if (status === Image.Ready) {
@@ -76,36 +87,45 @@ Item {
                             property real bW: model.bboxWidth * overlayLayer.scaleX
                             property real bH: model.bboxHeight * overlayLayer.scaleY
                             property bool isLow: model.isLowConfidence
-                            property bool isSel: model.isSelected
+                            property bool isSel: (model.isSelected === true) || (root.blockModel !== null && root.blockModel.selectedIndex === index)
                             property bool isPrinted: !model.isHandwriting
 
                             x: bX
                             y: bY
                             width: Math.max(bW, 4)
                             height: Math.max(bH, 4)
+                            z: isSel ? 20 : 1
 
-                            // Visual styling: Amber for low confidence, Blue for selected, Muted for printed
-                            border.width: isSel ? 2.5 : (isLow ? 2 : (isPrinted ? 1 : 0))
-                            border.color: isSel ? "#3b82f6" : (isLow ? "#f59e0b" : (isPrinted ? "#64748b" : "transparent"))
-                            color: isSel ? "#303b82f6" : (isLow ? "#25f59e0b" : (isPrinted ? "#1564748b" : "transparent"))
+                            // Visual styling: Distinct & clean default state, bold highlight when selected
+                            border.width: isSel ? 2.5 : (isLow ? 2.0 : (isPrinted ? 1.2 : 1.5))
+                            border.color: isSel ? "#2563eb" : (isLow ? "#d97706" : (isPrinted ? "#64748b" : "#0284c7"))
+                            color: isSel ? "#402563eb" : (isLow ? "#25d97706" : (isPrinted ? "#1564748b" : "#140284c7"))
                             radius: 3
 
-                            visible: isLow || isSel || isPrinted
+                            visible: true
+
+                            // Outer focus glow ring when selected
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.margins: -3
+                                radius: 5
+                                color: "transparent"
+                                border.color: "#2563eb"
+                                border.width: 2.0
+                                visible: isSel
+                                opacity: 0.9
+                            }
 
                             MouseArea {
                                 anchors.fill: parent
-                                hoverEnabled: true
+                                hoverEnabled: false
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    root.blockClicked(index, blockModel.getBlockMap(index));
                                     if (blockModel) {
                                         blockModel.selectedIndex = index;
                                     }
+                                    root.blockClicked(index, blockModel ? blockModel.getBlockMap(index) : null);
                                 }
-
-                                ToolTip.visible: containsMouse
-                                ToolTip.text: `${model.text}\n类型: ${model.isHandwriting ? "✍️ 手写体" : "🖨️ 印刷体"}\n识别置信度: ${(model.confidence * 100).toFixed(1)}%`
-                                ToolTip.delay: 200
                             }
                         }
                     }
@@ -155,6 +175,16 @@ Item {
         flickable.contentY = (container.height - flickable.height) / 2;
     }
 
+    function rotateImage(degrees) {
+        root.imageRotation = (root.imageRotation + degrees + 360) % 360;
+    }
+
+    function focusBlock(index) {
+        if (!blockModel || index < 0 || index >= blockModel.totalCount) return;
+        blockModel.selectedIndex = index;
+        scrollToBlock(index);
+    }
+
     function scrollToBlock(index) {
         if (!blockModel || index < 0 || index >= blockModel.totalCount) return;
         let map = blockModel.getBlockMap(index);
@@ -163,14 +193,22 @@ Item {
         let scaleX = imageItem.implicitWidth > 0 ? (imageWrapper.width / imageItem.implicitWidth) : 1.0;
         let scaleY = imageItem.implicitHeight > 0 ? (imageWrapper.height / imageItem.implicitHeight) : 1.0;
 
-        let targetImageX = map.bboxX * scaleX;
-        let targetImageY = map.bboxY * scaleY;
+        let targetImageX = (map.bboxX + map.bboxWidth / 2) * scaleX;
+        let targetImageY = (map.bboxY + map.bboxHeight / 2) * scaleY;
 
-        let targetContainerX = imageWrapper.x + targetImageX;
-        let targetContainerY = imageWrapper.y + targetImageY;
+        let targetContainerX = imageWrapper.x + targetImageX * root.currentScale;
+        let targetContainerY = imageWrapper.y + targetImageY * root.currentScale;
 
-        flickable.contentX = Math.max(0, Math.min(flickable.contentWidth - flickable.width, targetContainerX - flickable.width / 2));
-        flickable.contentY = Math.max(0, Math.min(flickable.contentHeight - flickable.height, targetContainerY - flickable.height / 2));
+        let destX = Math.max(0, Math.min(flickable.contentWidth - flickable.width, targetContainerX - flickable.width / 2));
+        let destY = Math.max(0, Math.min(flickable.contentHeight - flickable.height, targetContainerY - flickable.height / 2));
+
+        animContentX.stop();
+        animContentX.to = destX;
+        animContentX.start();
+
+        animContentY.stop();
+        animContentY.to = destY;
+        animContentY.start();
     }
 
     // Wheel zoom
@@ -186,7 +224,7 @@ Item {
         }
     }
 
-    // Modern Floating Glassmorphic Zoom HUD
+    // Modern Floating Glassmorphic Zoom & Rotate HUD
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
@@ -258,6 +296,37 @@ Item {
                 }
                 contentItem: Text { text: "1:1 原图"; color: "#93c5fd"; font.pixelSize: 11; anchors.centerIn: parent }
                 onClicked: root.resetOriginalSize()
+            }
+
+            Rectangle { width: 1; height: 16; color: "#475569"; anchors.verticalCenter: parent.verticalCenter }
+
+            // Rotate buttons
+            Button {
+                width: 26
+                height: 26
+                background: Rectangle {
+                    color: parent.hovered ? "#334155" : "transparent"
+                    radius: 13
+                }
+                contentItem: Text { text: "⟲"; color: "#93c5fd"; font.bold: true; font.pixelSize: 14; anchors.centerIn: parent }
+                onClicked: root.rotateImage(-90)
+                ToolTip.visible: hovered
+                ToolTip.text: "逆时针旋转 90°"
+                ToolTip.delay: 300
+            }
+
+            Button {
+                width: 26
+                height: 26
+                background: Rectangle {
+                    color: parent.hovered ? "#334155" : "transparent"
+                    radius: 13
+                }
+                contentItem: Text { text: "⟳"; color: "#93c5fd"; font.bold: true; font.pixelSize: 14; anchors.centerIn: parent }
+                onClicked: root.rotateImage(90)
+                ToolTip.visible: hovered
+                ToolTip.text: "顺时针旋转 90°"
+                ToolTip.delay: 300
             }
         }
     }

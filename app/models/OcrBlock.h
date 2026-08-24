@@ -47,6 +47,8 @@ struct OcrBlock {
     QString type = "handwriting";   // "handwriting", "printed", "text", "title"
     double handwritingScore = 1.0;  // 0.0 ~ 1.0
     QString status = "raw";         // "raw", "reviewed", "modified"
+    int charStart = -1;
+    int charEnd = -1;
 
     bool isLowConfidence(double threshold = 0.75) const {
         return confidence < threshold;
@@ -68,6 +70,8 @@ struct OcrBlock {
         obj["type"] = type;
         obj["handwritingScore"] = handwritingScore;
         obj["status"] = status;
+        obj["charStart"] = charStart;
+        obj["charEnd"] = charEnd;
         return obj;
     }
 
@@ -83,6 +87,8 @@ struct OcrBlock {
         block.type = obj["type"].toString("handwriting");
         block.handwritingScore = obj["handwritingScore"].toDouble(1.0);
         block.status = obj["status"].toString("raw");
+        block.charStart = obj["charStart"].toInt(-1);
+        block.charEnd = obj["charEnd"].toInt(-1);
         return block;
     }
 };

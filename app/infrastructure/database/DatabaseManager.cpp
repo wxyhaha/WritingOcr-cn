@@ -136,6 +136,8 @@ bool DatabaseManager::createTables() {
             block_index INTEGER DEFAULT 0,
             type TEXT DEFAULT 'text',
             status TEXT DEFAULT 'raw',
+            char_start INTEGER DEFAULT -1,
+            char_end INTEGER DEFAULT -1,
             FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE
         );
     )";
@@ -143,6 +145,9 @@ bool DatabaseManager::createTables() {
         Logger::instance().error("Database", QString("Create ocr_blocks error: %1").arg(q.lastError().text()));
         return false;
     }
+    // Migration: ensure char_start and char_end exist in existing databases
+    q.exec("ALTER TABLE ocr_blocks ADD COLUMN char_start INTEGER DEFAULT -1");
+    q.exec("ALTER TABLE ocr_blocks ADD COLUMN char_end INTEGER DEFAULT -1");
 
     // settings table
     QString createSettings = R"(
@@ -515,8 +520,8 @@ bool DatabaseManager::saveOcrResult(const OcrResult& ocrResult) {
     }
 
     QSqlQuery qBlock(m_db);
-    qBlock.prepare("INSERT INTO ocr_blocks (id, page_id, text, confidence, bbox_x, bbox_y, bbox_w, bbox_h, line_index, block_index, type, status) "
-                   "VALUES (:id, :page_id, :text, :confidence, :bbox_x, :bbox_y, :bbox_w, :bbox_h, :line_index, :block_index, :type, :status)");
+    qBlock.prepare("INSERT INTO ocr_blocks (id, page_id, text, confidence, bbox_x, bbox_y, bbox_w, bbox_h, line_index, block_index, type, status, char_start, char_end) "
+                   "VALUES (:id, :page_id, :text, :confidence, :bbox_x, :bbox_y, :bbox_w, :bbox_h, :line_index, :block_index, :type, :status, :char_start, :char_end)");
 
     for (const auto& block : ocrResult.blocks) {
         qBlock.bindValue(":id", block.id);
@@ -531,6 +536,8 @@ bool DatabaseManager::saveOcrResult(const OcrResult& ocrResult) {
         qBlock.bindValue(":block_index", block.blockIndex);
         qBlock.bindValue(":type", block.type);
         qBlock.bindValue(":status", block.status);
+        qBlock.bindValue(":char_start", block.charStart);
+        qBlock.bindValue(":char_end", block.charEnd);
         if (!qBlock.exec()) {
             m_db.rollback();
             Logger::instance().error("Database", QString("Save ocr_block failed: %1").arg(qBlock.lastError().text()));
@@ -560,7 +567,7 @@ std::unique_ptr<OcrResult> DatabaseManager::getOcrResultByPageId(const QString& 
         result->rawText = q.value("raw_text").toString();
 
         QSqlQuery qBlocks(m_db);
-        qBlocks.prepare("SELECT id, text, confidence, bbox_x, bbox_y, bbox_w, bbox_h, line_index, block_index, type, status FROM ocr_blocks WHERE page_id = :page_id ORDER BY line_index ASC, block_index ASC");
+        qBlocks.prepare("SELECT id, text, confidence, bbox_x, bbox_y, bbox_w, bbox_h, line_index, block_index, type, status, char_start, char_end FROM ocr_blocks WHERE page_id = :page_id ORDER BY line_index ASC, block_index ASC");
         qBlocks.bindValue(":page_id", pageId);
         if (qBlocks.exec()) {
             while (qBlocks.next()) {
@@ -577,6 +584,8 @@ std::unique_ptr<OcrResult> DatabaseManager::getOcrResultByPageId(const QString& 
                 block.blockIndex = qBlocks.value("block_index").toInt();
                 block.type = qBlocks.value("type").toString();
                 block.status = qBlocks.value("status").toString();
+                block.charStart = qBlocks.value("char_start").isNull() ? -1 : qBlocks.value("char_start").toInt();
+                block.charEnd = qBlocks.value("char_end").isNull() ? -1 : qBlocks.value("char_end").toInt();
                 result->blocks.append(block);
             }
         }

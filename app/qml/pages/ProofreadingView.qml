@@ -217,6 +217,7 @@ Item {
                         blockModel: app.ocrBlockListModel
                         onBlockClicked: (index, blockMap) => {
                             app.ocrBlockListModel.selectedIndex = index;
+                            textEditor.selectTextForBlock(index);
                         }
                     }
 
@@ -232,7 +233,7 @@ Item {
                             app.taskService.updateCurrentPageText(newText);
                         }
                         onBlockSelected: (blockIndex) => {
-                            imageViewer.scrollToBlock(blockIndex);
+                            imageViewer.focusBlock(blockIndex);
                         }
                     }
                 }
@@ -386,7 +387,8 @@ Item {
                             let prev = app.ocrBlockListModel.findPreviousLowConfidenceIndex(cur);
                             if (prev !== -1) {
                                 app.ocrBlockListModel.selectedIndex = prev;
-                                imageViewer.scrollToBlock(prev);
+                                imageViewer.focusBlock(prev);
+                                textEditor.selectTextForBlock(prev);
                             }
                         }
                     }
@@ -412,7 +414,8 @@ Item {
                             let next = app.ocrBlockListModel.findNextLowConfidenceIndex(cur);
                             if (next !== -1) {
                                 app.ocrBlockListModel.selectedIndex = next;
-                                imageViewer.scrollToBlock(next);
+                                imageViewer.focusBlock(next);
+                                textEditor.selectTextForBlock(next);
                             }
                         }
                     }

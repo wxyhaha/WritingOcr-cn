@@ -30,7 +30,9 @@ public:
         HandwritingScoreRole,
         IsHandwritingRole,
         IsLowConfidenceRole,
-        IsSelectedRole
+        IsSelectedRole,
+        CharStartRole,
+        CharEndRole
     };
 
     explicit OcrBlockListModel(QObject* parent = nullptr);
@@ -53,6 +55,10 @@ public:
 
     Q_INVOKABLE int findNextLowConfidenceIndex(int startIndex) const;
     Q_INVOKABLE int findPreviousLowConfidenceIndex(int startIndex) const;
+    Q_INVOKABLE int findBlockIndexByCharOffset(int charOffset) const;
+    Q_INVOKABLE int findBlockIndexForCursor(int charOffset, const QString& currentText) const;
+    Q_INVOKABLE int getCharStart(int index) const;
+    Q_INVOKABLE int getCharLength(int index) const;
     Q_INVOKABLE QVariantMap getBlockMap(int index) const;
 
 signals:

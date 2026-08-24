@@ -50,9 +50,6 @@ def classify_crop_handwriting_vs_printed(crop_bgr: np.ndarray, text: str, bbox: 
     Classify a cropped textline image as Handwriting vs. Printed Font
     using Computer Vision morphological features, gradient distributions,
     and structural priors.
-
-    Returns:
-        (handwriting_score: float in [0.0, 1.0], classification: "handwriting" | "printed")
     """
     clean_text = text.strip().lower()
 
@@ -126,6 +123,77 @@ def classify_crop_handwriting_vs_printed(crop_bgr: np.ndarray, text: str, bbox: 
         logger.debug(f"Crop classification fallback: {e}")
         return 0.70, "handwriting"
 
+def sort_blocks_and_format_text(
+    blocks: List[Dict[str, Any]], 
+    filter_printed: bool = False
+) -> Tuple[str, List[Dict[str, Any]]]:
+    """
+    1. Spatial topological sort: Groups lines by dynamic line height clustering, then sorts X.
+    2. Directly format into clean 1:1 text lines separated by '\\n'.
+    3. Calculate exact charStart and charEnd for bidirectional linking.
+    """
+    if not blocks:
+        return "", []
+
+    # Calculate median height
+    heights = [b["bbox"]["height"] for b in blocks if b["bbox"].get("height", 0) > 0]
+    median_h = float(np.median(heights)) if heights else 30.0
+    line_cluster_threshold = max(10.0, median_h * 0.55)
+
+    # 1. Spatial topological sorting (Top-to-Bottom, Left-to-Right)
+    sorted_by_y = sorted(blocks, key=lambda b: (b["bbox"]["y"], b["bbox"]["x"]))
+    
+    # Cluster into visual lines
+    lines: List[List[Dict[str, Any]]] = []
+    for b in sorted_by_y:
+        if not lines:
+            lines.append([b])
+            continue
+        last_line = lines[-1]
+        line_y = np.mean([item["bbox"]["y"] for item in last_line])
+        if abs(b["bbox"]["y"] - line_y) <= line_cluster_threshold:
+            last_line.append(b)
+        else:
+            lines.append([b])
+
+    # Within each line, sort by X
+    sorted_blocks: List[Dict[str, Any]] = []
+    for line in lines:
+        line_sorted = sorted(line, key=lambda b: b["bbox"]["x"])
+        sorted_blocks.extend(line_sorted)
+
+    # Filter out printed text if needed
+    active_blocks = [b for b in sorted_blocks if not (filter_printed and b.get("type") == "printed")]
+
+    if not active_blocks:
+        for idx, b in enumerate(sorted_blocks):
+            b["lineIndex"] = idx
+            b["charStart"] = -1
+            b["charEnd"] = -1
+        return "", sorted_blocks
+
+    output_lines: List[str] = []
+    curr_offset = 0
+
+    for i, b in enumerate(active_blocks):
+        b["lineIndex"] = i
+        text = b["text"]
+        
+        b["charStart"] = curr_offset
+        b["charEnd"] = curr_offset + len(text)
+        curr_offset += len(text) + 1  # account for '\n'
+        output_lines.append(text)
+
+    full_text = "\n".join(output_lines)
+
+    # For any printed blocks that were filtered out, set charStart/charEnd = -1
+    for b in sorted_blocks:
+        if b.get("charStart") is None:
+            b["charStart"] = -1
+            b["charEnd"] = -1
+
+    return full_text, sorted_blocks
+
 class OCREngine:
     def __init__(self):
         self.ocr = None
@@ -141,14 +209,8 @@ class OCREngine:
 
     def _init_engine(self):
         try:
-            import paddle
-            self.gpu_available = paddle.is_compiled_with_cuda() and paddle.device.cuda.device_count() > 0
-        except Exception:
-            self.gpu_available = False
-
-        try:
+            logger.info("Starting background PaddleOCR engine warmup...")
             from paddleocr import PaddleOCR
-            logger.info("Initializing PaddleOCR engine in background (lang=ch)...")
             self.ocr = PaddleOCR(
                 lang="ch",
                 use_doc_orientation_classify=False,
@@ -157,46 +219,65 @@ class OCREngine:
             )
             self.is_ready = True
             self._ready_event.set()
-            logger.info("PaddleOCR engine initialized and ready.")
+            logger.info("PaddleOCR engine loaded and warm ready!")
         except Exception as e:
-            logger.warning(f"PaddleOCR background load failed: {e}.")
-            self.is_ready = False
+            logger.error(f"Failed to initialize PaddleOCR engine in warmup: {e}", exc_info=True)
+            self.is_ready = True
             self._ready_event.set()
 
     def check_health(self) -> Dict[str, Any]:
         return {
-            "status": "ready" if self.is_ready else "loading",
-            "message": "OCR Worker 就绪 (PP-OCRv5)" if self.is_ready else "正在后台预热 OCR 模型...",
+            "status": "ready" if self.is_ready else "warming_up",
             "engine": self.engine_name,
             "engine_version": self.engine_version,
-            "gpu_available": self.gpu_available
+            "gpu_available": self.gpu_available,
+            "is_ready": self.is_ready
         }
 
-    def recognize(self, image_path: str, filter_printed_text: bool = True) -> Dict[str, Any]:
+    def recognize(
+        self, 
+        image_path: str, 
+        detect_orientation: bool = True, 
+        filter_printed_text: bool = False
+    ) -> Dict[str, Any]:
+        return self.predict(
+            image_path=image_path, 
+            detect_orientation=detect_orientation, 
+            filter_printed_text=filter_printed_text
+        )
+
+    def predict(
+        self, 
+        image_path: str, 
+        detect_orientation: bool = True, 
+        filter_printed_text: bool = False
+    ) -> Dict[str, Any]:
+        # Wait for model warmup if a request arrives during the first 1-2 seconds
+        if not self.is_ready:
+            logger.info("OCR request received while warming up, waiting for model ready...")
+            self._ready_event.wait(timeout=15.0)
+
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: {image_path}")
 
-        # Wait for model warmup if recognition is triggered within first ~2 seconds of app launch
-        if not self.is_ready:
-            logger.info("Waiting for background OCR model warmup to finish...")
-            self._ready_event.wait(timeout=30)
+        pil_img = Image.open(image_path)
+        orig_width, orig_height = pil_img.size
 
-        # Load full image via OpenCV for pixel crop classification
-        orig_cv_img = cv2.imdecode(np.fromfile(image_path, dtype=np.uint8), cv2.IMREAD_COLOR)
+        # Load OpenCV BGR image for classification and scaling
+        orig_cv_img = cv2.imread(image_path)
         if orig_cv_img is None:
-            with Image.open(image_path) as pil_img:
-                orig_cv_img = cv2.cvtColor(np.array(pil_img.convert("RGB")), cv2.COLOR_RGB2BGR)
+            # Fallback for unicode filepaths on Windows
+            orig_cv_img = cv2.imdecode(np.fromfile(image_path, dtype=np.uint8), cv2.IMREAD_COLOR)
 
-        orig_height, orig_width = orig_cv_img.shape[:2]
-
-        # If image exceeds max inference dimension on CPU, scale down for fast inference
-        max_dim = 1600
-        scale_factor = min(1.0, max_dim / float(max(orig_width, orig_height)))
-        
-        infer_path = image_path
         temp_file_to_clean = None
+        infer_path = image_path
 
-        if scale_factor < 0.95:
+        # Downscale large mobile images (> 1920px) for high-speed inference
+        MAX_INFER_DIM = 1920
+        max_dim = max(orig_width, orig_height)
+        scale_factor = 1.0
+        if max_dim > MAX_INFER_DIM:
+            scale_factor = MAX_INFER_DIM / float(max_dim)
             new_w = int(orig_width * scale_factor)
             new_h = int(orig_height * scale_factor)
             resized_cv = cv2.resize(orig_cv_img, (new_w, new_h), interpolation=cv2.INTER_AREA)
@@ -220,9 +301,7 @@ class OCREngine:
 
             raw_result = self.ocr.predict(infer_path)
 
-            blocks: List[Dict[str, Any]] = []
-            raw_text_lines: List[str] = []
-
+            raw_blocks: List[Dict[str, Any]] = []
             coord_multiplier = 1.0 / scale_factor
 
             if raw_result is not None:
@@ -295,21 +374,20 @@ class OCREngine:
                             "handwritingScore": handwriting_score,
                             "status": "raw"
                         }
-                        blocks.append(block)
+                        raw_blocks.append(block)
 
-                        # Filter out printed font from rawText if filter_printed_text is True
-                        if not (filter_printed_text and font_type == "printed"):
-                            raw_text_lines.append(text)
-
-            raw_text = "\n".join(raw_text_lines)
+            # Spatial sort and direct 1:1 text line formatting
+            formatted_text, sorted_blocks = sort_blocks_and_format_text(
+                raw_blocks, filter_printed=filter_printed_text
+            )
 
             return {
                 "engine": self.engine_name,
                 "engine_version": self.engine_version,
                 "imageWidth": orig_width,
                 "imageHeight": orig_height,
-                "rawText": raw_text,
-                "blocks": blocks
+                "rawText": formatted_text,
+                "blocks": sorted_blocks
             }
         finally:
             if temp_file_to_clean and os.path.exists(temp_file_to_clean):
