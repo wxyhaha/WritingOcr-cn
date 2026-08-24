@@ -7,6 +7,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QTimer>
+#include <QTcpSocket>
 
 namespace HandwritingOCR {
 
@@ -67,6 +68,16 @@ void OcrService::checkWorkerHealth() {
 
 void OcrService::startWorkerProcess() {
     if (m_workerProcess && m_workerProcess->state() == QProcess::Running) {
+        return;
+    }
+
+    // Check if another instance or process is already listening on port 8766
+    QTcpSocket testSock;
+    testSock.connectToHost("127.0.0.1", 8766);
+    if (testSock.waitForConnected(300)) {
+        testSock.disconnectFromHost();
+        Logger::instance().info("OcrService", "OCR Worker service already active on port 8766.");
+        checkWorkerHealth();
         return;
     }
 
