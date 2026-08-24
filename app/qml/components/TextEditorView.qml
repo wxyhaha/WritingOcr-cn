@@ -221,13 +221,11 @@ Item {
         Rectangle {
             id: searchBar
             Layout.fillWidth: true
-            height: root.isSearchOpen ? 80 : 0
-            visible: height > 0
+            Layout.preferredHeight: root.isSearchOpen ? 86 : 0
+            visible: root.isSearchOpen
             clip: true
             color: "#f8fafc"
             border.color: "#e2e8f0"
-
-            Behavior on height { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
 
             property int matchCount: 0
             property int currentMatchIndex: 0
@@ -292,12 +290,16 @@ Item {
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 8
+                anchors.leftMargin: 10
+                anchors.rightMargin: 10
+                anchors.topMargin: 8
+                anchors.bottomMargin: 8
                 spacing: 6
 
                 // Row 1: Search & Navigation
                 RowLayout {
                     Layout.fillWidth: true
+                    Layout.preferredHeight: 30
                     spacing: 6
 
                     TextField {
@@ -307,7 +309,11 @@ Item {
                         Layout.preferredHeight: 28
                         font.pixelSize: 12
                         verticalAlignment: TextInput.AlignVCenter
+                        padding: 0
+                        leftPadding: 8
+                        rightPadding: 8
                         background: Rectangle {
+                            implicitHeight: 28
                             color: "#ffffff"
                             border.color: searchField.activeFocus ? "#3b82f6" : "#cbd5e1"
                             radius: 4
@@ -339,9 +345,6 @@ Item {
                         background: Rectangle { color: parent.hovered ? "#e2e8f0" : "#f1f5f9"; border.color: "#cbd5e1"; radius: 4 }
                         contentItem: Text { text: "▲"; font.pixelSize: 10; color: parent.enabled ? "#334155" : "#94a3b8"; anchors.centerIn: parent }
                         onClicked: searchBar.prevMatch()
-                        ToolTip.visible: hovered
-                        ToolTip.text: "上一个"
-                        ToolTip.delay: 200
                     }
 
                     Button {
@@ -351,9 +354,6 @@ Item {
                         background: Rectangle { color: parent.hovered ? "#e2e8f0" : "#f1f5f9"; border.color: "#cbd5e1"; radius: 4 }
                         contentItem: Text { text: "▼"; font.pixelSize: 10; color: parent.enabled ? "#334155" : "#94a3b8"; anchors.centerIn: parent }
                         onClicked: searchBar.nextMatch()
-                        ToolTip.visible: hovered
-                        ToolTip.text: "下一个"
-                        ToolTip.delay: 200
                     }
 
                     Button {
@@ -362,15 +362,13 @@ Item {
                         background: Rectangle { color: parent.hovered ? "#fee2e2" : "transparent"; radius: 4 }
                         contentItem: Text { text: "✕"; font.pixelSize: 12; color: "#64748b"; anchors.centerIn: parent }
                         onClicked: root.isSearchOpen = false
-                        ToolTip.visible: hovered
-                        ToolTip.text: "关闭 (Esc)"
-                        ToolTip.delay: 200
                     }
                 }
 
                 // Row 2: Replace & Actions
                 RowLayout {
                     Layout.fillWidth: true
+                    Layout.preferredHeight: 30
                     spacing: 6
 
                     TextField {
@@ -380,7 +378,11 @@ Item {
                         Layout.preferredHeight: 28
                         font.pixelSize: 12
                         verticalAlignment: TextInput.AlignVCenter
+                        padding: 0
+                        leftPadding: 8
+                        rightPadding: 8
                         background: Rectangle {
+                            implicitHeight: 28
                             color: "#ffffff"
                             border.color: replaceField.activeFocus ? "#3b82f6" : "#cbd5e1"
                             radius: 4
