@@ -37,10 +37,12 @@ engine = OCREngine()
 class OcrRequest(BaseModel):
     image_path: str
     lang: Optional[str] = "ch"
+    filter_printed_text: Optional[bool] = True
 
 class OcrBatchRequest(BaseModel):
     image_paths: List[str]
     lang: Optional[str] = "ch"
+    filter_printed_text: Optional[bool] = True
 
 @app.get("/health")
 def health():
@@ -53,18 +55,18 @@ def capabilities():
         "version": "PP-OCRv5",
         "supported_languages": ["ch", "en"],
         "gpu_available": engine.gpu_available,
-        "features": ["det", "rec", "cls", "confidence", "pixel_bbox"]
+        "features": ["det", "rec", "cls", "confidence", "pixel_bbox", "filter_printed_text"]
     }
 
 @app.post("/ocr")
 def ocr(req: OcrRequest):
     try:
         norm_path = os.path.normpath(req.image_path)
-        logger.info(f"Received OCR request for image: {norm_path}")
+        logger.info(f"Received OCR request for image: {norm_path}, filter_printed_text={req.filter_printed_text}")
         if not os.path.exists(norm_path):
             logger.error(f"Image not found at path: {norm_path}")
             raise HTTPException(status_code=404, detail=f"Image file not found: {norm_path}")
-        result = engine.recognize(norm_path)
+        result = engine.recognize(norm_path, filter_printed_text=bool(req.filter_printed_text))
         logger.info(f"OCR completed for {norm_path}, recognized {len(result.get('blocks', []))} blocks.")
         return result
     except HTTPException:
@@ -78,7 +80,7 @@ def ocr_batch(req: OcrBatchRequest):
     results = []
     for path in req.image_paths:
         try:
-            res = engine.recognize(path)
+            res = engine.recognize(path, filter_printed_text=bool(req.filter_printed_text))
             results.append({"image_path": path, "success": True, "result": res})
         except Exception as e:
             results.append({"image_path": path, "success": False, "error": str(e)})

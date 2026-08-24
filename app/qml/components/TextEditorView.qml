@@ -10,6 +10,7 @@ Item {
 
     signal textEdited(string newText)
     signal blockRequested(int index)
+    signal blockSelected(int index)
 
     onTextChanged: {
         if (textArea.text !== root.text) {

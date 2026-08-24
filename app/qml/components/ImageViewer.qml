@@ -5,6 +5,7 @@ Item {
     id: root
 
     property string imageSource: ""
+    property string imagePath: ""
     property var blockModel: null
     property int selectedIndex: blockModel ? blockModel.selectedIndex : -1
 
@@ -39,7 +40,7 @@ Item {
                 Image {
                     id: imageItem
                     anchors.fill: parent
-                    source: root.imageSource ? app.localFileToUrl(root.imageSource) : ""
+                    source: (root.imagePath !== "" ? root.imagePath : root.imageSource) ? app.localFileToUrl(root.imagePath !== "" ? root.imagePath : root.imageSource) : ""
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
                     cache: true
@@ -76,19 +77,20 @@ Item {
                             property real bH: model.bboxHeight * overlayLayer.scaleY
                             property bool isLow: model.isLowConfidence
                             property bool isSel: model.isSelected
+                            property bool isPrinted: !model.isHandwriting
 
                             x: bX
                             y: bY
                             width: Math.max(bW, 4)
                             height: Math.max(bH, 4)
 
-                            // Visual styling: Yellow box for low confidence, blue highlight for selected
-                            border.width: isSel ? 3 : (isLow ? 2 : 1)
-                            border.color: isSel ? "#3b82f6" : (isLow ? "#eab308" : "transparent")
-                            color: isSel ? "#333b82f6" : (isLow ? "#22eab308" : "transparent")
+                            // Visual styling: Yellow for low confidence, Blue for selected, Muted dashed for printed
+                            border.width: isSel ? 3 : (isLow ? 2 : (isPrinted ? 1 : 0))
+                            border.color: isSel ? "#3b82f6" : (isLow ? "#eab308" : (isPrinted ? "#94a3b8" : "transparent"))
+                            color: isSel ? "#333b82f6" : (isLow ? "#22eab308" : (isPrinted ? "#1594a3b8" : "transparent"))
                             radius: 2
 
-                            visible: isLow || isSel
+                            visible: isLow || isSel || isPrinted
 
                             MouseArea {
                                 anchors.fill: parent
@@ -102,8 +104,8 @@ Item {
                                 }
 
                                 ToolTip.visible: containsMouse
-                                ToolTip.text: `${model.text}\n置信度: ${(model.confidence * 100).toFixed(1)}%`
-                                ToolTip.delay: 300
+                                ToolTip.text: `${model.text}\n类型: ${model.isHandwriting ? "手写体" : "印刷体"}\n识别置信度: ${(model.confidence * 100).toFixed(1)}%`
+                                ToolTip.delay: 200
                             }
                         }
                     }

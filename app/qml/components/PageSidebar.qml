@@ -101,7 +101,7 @@ Item {
                         id: thumbImage
                         anchors.fill: parent
                         anchors.margins: 4
-                        source: model.thumbnailPath ? (model.thumbnailPath.startsWith("file:") ? model.thumbnailPath : "file:///" + model.thumbnailPath) : ""
+                        source: (model.thumbnailPath && model.thumbnailPath !== "") ? app.localFileToUrl(model.thumbnailPath) : (model.originalImagePath ? app.localFileToUrl(model.originalImagePath) : "")
                         fillMode: Image.PreserveAspectFit
                         asynchronous: true
                         smooth: true

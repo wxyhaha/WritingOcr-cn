@@ -10,6 +10,7 @@ class SettingsService : public QObject {
     Q_PROPERTY(QString ocrEngine READ ocrEngine WRITE setOcrEngine NOTIFY settingsChanged)
     Q_PROPERTY(double lowConfidenceThreshold READ lowConfidenceThreshold WRITE setLowConfidenceThreshold NOTIFY settingsChanged)
     Q_PROPERTY(bool autoEnhance READ autoEnhance WRITE setAutoEnhance NOTIFY settingsChanged)
+    Q_PROPERTY(bool filterPrintedText READ filterPrintedText WRITE setFilterPrintedText NOTIFY settingsChanged)
     Q_PROPERTY(QString ocrWorkerUrl READ ocrWorkerUrl WRITE setOcrWorkerUrl NOTIFY settingsChanged)
     Q_PROPERTY(bool lanUploadEnabled READ lanUploadEnabled WRITE setLanUploadEnabled NOTIFY settingsChanged)
     Q_PROPERTY(int lanUploadPort READ lanUploadPort WRITE setLanUploadPort NOTIFY settingsChanged)
@@ -29,6 +30,9 @@ public:
 
     bool autoEnhance() const { return m_autoEnhance; }
     void setAutoEnhance(bool val);
+
+    bool filterPrintedText() const { return m_filterPrintedText; }
+    void setFilterPrintedText(bool val);
 
     QString ocrWorkerUrl() const { return m_ocrWorkerUrl; }
     void setOcrWorkerUrl(const QString& val);
@@ -57,6 +61,7 @@ private:
     QString m_ocrEngine = "PaddleOCR";
     double m_lowConfidenceThreshold = 0.75;
     bool m_autoEnhance = false;
+    bool m_filterPrintedText = true;
     QString m_ocrWorkerUrl = "http://127.0.0.1:8766";
     bool m_lanUploadEnabled = true;
     int m_lanUploadPort = 8765;

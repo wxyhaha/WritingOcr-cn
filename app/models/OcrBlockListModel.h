@@ -27,6 +27,8 @@ public:
         BlockIndexRole,
         TypeRole,
         StatusRole,
+        HandwritingScoreRole,
+        IsHandwritingRole,
         IsLowConfidenceRole,
         IsSelectedRole
     };

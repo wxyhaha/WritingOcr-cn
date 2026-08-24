@@ -16,6 +16,7 @@ struct ProviderInfo {
 struct OcrRequest {
     QString imagePath;
     QString lang = "ch";
+    bool filterPrintedText = true;
 };
 
 class IOcrProvider {

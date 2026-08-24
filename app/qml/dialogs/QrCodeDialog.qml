@@ -110,7 +110,6 @@ Dialog {
                     }
                     onClicked: {
                         app.copyToClipboard(app.lanUploadService.uploadUrl);
-                        app.showToast("上传链接已复制到剪贴板", "success");
                     }
                 }
 

@@ -26,11 +26,13 @@ QVariant OcrBlockListModel::data(const QModelIndex& index, int role) const {
         case BboxHeightRole:      return block.bbox.height;
         case LineIndexRole:       return block.lineIndex;
         case BlockIndexRole:      return block.blockIndex;
-        case TypeRole:            return block.type;
-        case StatusRole:          return block.status;
-        case IsLowConfidenceRole: return block.isLowConfidence(m_threshold);
-        case IsSelectedRole:      return index.row() == m_selectedIndex;
-        default:                  return QVariant();
+        case TypeRole:             return block.type;
+        case StatusRole:           return block.status;
+        case HandwritingScoreRole: return block.handwritingScore;
+        case IsHandwritingRole:    return block.isHandwriting();
+        case IsLowConfidenceRole:  return block.isLowConfidence(m_threshold);
+        case IsSelectedRole:       return index.row() == m_selectedIndex;
+        default:                   return QVariant();
     }
 }
 
@@ -48,6 +50,8 @@ QHash<int, QByteArray> OcrBlockListModel::roleNames() const {
     roles[BlockIndexRole] = "blockIndex";
     roles[TypeRole] = "type";
     roles[StatusRole] = "status";
+    roles[HandwritingScoreRole] = "handwritingScore";
+    roles[IsHandwritingRole] = "isHandwriting";
     roles[IsLowConfidenceRole] = "isLowConfidence";
     roles[IsSelectedRole] = "isSelected";
     return roles;

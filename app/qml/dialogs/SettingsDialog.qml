@@ -75,6 +75,22 @@ Dialog {
             Row {
                 width: parent.width
                 spacing: 12
+                Text { text: "过滤印刷体/水印:"; font.pixelSize: 13; color: "#475569"; width: 110; anchors.verticalCenter: parent.verticalCenter }
+                Switch {
+                    checked: app.settingsService.filterPrintedText
+                    onToggled: app.settingsService.filterPrintedText = checked
+                }
+                Text {
+                    text: "(自动过滤笔记本印刷行头与相机水印)"
+                    font.pixelSize: 11
+                    color: "#94a3b8"
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
+            Row {
+                width: parent.width
+                spacing: 12
                 Text { text: "OCR 服务端地址:"; font.pixelSize: 13; color: "#475569"; width: 110; anchors.verticalCenter: parent.verticalCenter }
                 TextField {
                     id: workerUrlField

@@ -22,6 +22,7 @@ void SettingsService::load() {
         m_lowConfidenceThreshold = 0.75;
     }
     m_autoEnhance = db.getSetting("autoEnhance", "0") == "1";
+    m_filterPrintedText = db.getSetting("filterPrintedText", "1") == "1";
     m_ocrWorkerUrl = db.getSetting("ocrWorkerUrl", "http://127.0.0.1:8766");
     m_lanUploadEnabled = db.getSetting("lanUploadEnabled", "1") == "1";
     m_lanUploadPort = db.getSetting("lanUploadPort", "8765").toInt();
@@ -54,6 +55,14 @@ void SettingsService::setAutoEnhance(bool val) {
     if (m_autoEnhance != val) {
         m_autoEnhance = val;
         DatabaseManager::instance().setSetting("autoEnhance", val ? "1" : "0");
+        emit settingsChanged();
+    }
+}
+
+void SettingsService::setFilterPrintedText(bool val) {
+    if (m_filterPrintedText != val) {
+        m_filterPrintedText = val;
+        DatabaseManager::instance().setSetting("filterPrintedText", val ? "1" : "0");
         emit settingsChanged();
     }
 }

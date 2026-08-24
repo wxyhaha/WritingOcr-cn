@@ -19,6 +19,9 @@ OcrService& OcrService::instance() {
 OcrService::OcrService(QObject* parent) : QObject(parent) {
     m_provider = std::make_unique<PaddleOcrProvider>(SettingsService::instance().ocrWorkerUrl());
 
+    m_tickerTimer = new QTimer(this);
+    connect(m_tickerTimer, &QTimer::timeout, this, &OcrService::onTick);
+
     connect(&SettingsService::instance(), &SettingsService::settingsChanged, this, [this]() {
         if (auto paddle = dynamic_cast<PaddleOcrProvider*>(m_provider.get())) {
             paddle->setBaseUrl(SettingsService::instance().ocrWorkerUrl());
@@ -28,6 +31,7 @@ OcrService::OcrService(QObject* parent) : QObject(parent) {
 }
 
 OcrService::~OcrService() {
+    stopProgressTimer();
     stopWorkerProcess();
 }
 
@@ -53,6 +57,43 @@ void OcrService::setWorkerStatus(bool running, const QString& msg) {
         m_isWorkerRunning = running;
         m_workerStatusMessage = msg;
         emit workerStatusChanged();
+    }
+}
+
+void OcrService::setProgress(int current, int total, const QString& statusText) {
+    m_currentProgress = current;
+    m_totalProgress = total;
+    if (!statusText.isEmpty()) {
+        m_progressText = statusText;
+    }
+    emit progressChanged(current, total);
+}
+
+void OcrService::startProgressTimer() {
+    m_elapsedTimer.restart();
+    m_elapsedSeconds = 0.0;
+    emit progressTicker();
+    if (!m_tickerTimer->isActive()) {
+        m_tickerTimer->start(100);
+    }
+}
+
+void OcrService::stopProgressTimer() {
+    if (m_tickerTimer && m_tickerTimer->isActive()) {
+        m_tickerTimer->stop();
+    }
+    if (m_elapsedTimer.isValid()) {
+        m_lastDuration = m_elapsedTimer.elapsed() / 1000.0;
+        m_elapsedSeconds = m_lastDuration;
+        emit progressTicker();
+        emit finishedDurationChanged();
+    }
+}
+
+void OcrService::onTick() {
+    if (m_isProcessing && m_elapsedTimer.isValid()) {
+        m_elapsedSeconds = m_elapsedTimer.elapsed() / 1000.0;
+        emit progressTicker();
     }
 }
 
@@ -84,25 +125,35 @@ void OcrService::startWorkerProcess() {
     if (!m_workerProcess) {
         m_workerProcess = new QProcess(this);
         connect(m_workerProcess, &QProcess::readyReadStandardOutput, this, [this]() {
-            QByteArray out = m_workerProcess->readAllStandardOutput();
-            Logger::instance().debug("OCRWorkerProcess", QString::fromUtf8(out).trimmed());
+            QString out = QString::fromUtf8(m_workerProcess->readAllStandardOutput());
+            Logger::instance().debug("OCRWorkerProcess", out.trimmed());
         });
         connect(m_workerProcess, &QProcess::readyReadStandardError, this, [this]() {
-            QByteArray err = m_workerProcess->readAllStandardError();
-            Logger::instance().debug("OCRWorkerProcess", QString::fromUtf8(err).trimmed());
+            QString err = QString::fromUtf8(m_workerProcess->readAllStandardError());
+            Logger::instance().debug("OCRWorkerProcess", err.trimmed());
+        });
+        connect(m_workerProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+                this, [this](int exitCode, QProcess::ExitStatus) {
+            Logger::instance().info("OcrService", QString("OCR Worker process exited with code %1").arg(exitCode));
+            setWorkerStatus(false, "OCR Worker 未启动");
         });
     }
 
     QString appDir = QCoreApplication::applicationDirPath();
     QString scriptPath = QDir(appDir).filePath("ocr-worker/main.py");
     if (!QFile::exists(scriptPath)) {
-        scriptPath = "d:/otherCode/WritingOcr-cn/ocr-worker/main.py";
+        // Look in source tree during development
+        scriptPath = QDir(appDir).filePath("../../ocr-worker/main.py");
+        if (!QFile::exists(scriptPath)) {
+            scriptPath = "d:/otherCode/WritingOcr-cn/ocr-worker/main.py";
+        }
     }
 
     QString pythonExe = "py";
     QStringList args;
     args << "-3.13" << scriptPath;
 
+    // Check for direct python path
     if (QFile::exists("C:/Users/Administrator/AppData/Local/Programs/Python/Python313/python.exe")) {
         pythonExe = "C:/Users/Administrator/AppData/Local/Programs/Python/Python313/python.exe";
         args.clear();
@@ -133,6 +184,8 @@ void OcrService::stopWorkerProcess() {
 
 void OcrService::cancelRecognition() {
     m_cancelRequested = true;
+    m_progressText = "正在取消识别...";
+    emit progressChanged(m_currentProgress, m_totalProgress);
 }
 
 void OcrService::recognizeCurrentPage() {
@@ -159,27 +212,29 @@ void OcrService::recognizeCurrentPage() {
 
     setProcessing(true);
     m_cancelRequested = false;
-    m_currentProgress = 0;
-    m_totalProgress = 1;
-    emit progressChanged(0, 1);
+    setProgress(0, 1, "正在进行单页 OCR 识别...");
+    startProgressTimer();
 
-    QtConcurrent::run([this, pageId, imgPath]() {
+    bool filterPrinted = SettingsService::instance().filterPrintedText();
+
+    QtConcurrent::run([this, pageId, imgPath, filterPrinted]() {
         OcrRequest req;
         req.imagePath = imgPath;
         req.lang = "ch";
+        req.filterPrintedText = filterPrinted;
 
         QString errMsg;
         auto resultOpt = m_provider->recognize(req, &errMsg);
 
         QMetaObject::invokeMethod(this, [this, pageId, resultOpt, errMsg]() {
+            stopProgressTimer();
             setProcessing(false);
             if (resultOpt.has_value()) {
                 auto result = *resultOpt;
                 result.pageId = pageId;
                 TaskService::instance().updatePageOcrResult(pageId, result);
                 emit pageOcrCompleted(pageId);
-                m_currentProgress = 1;
-                emit progressChanged(1, 1);
+                setProgress(1, 1, QString("识别完成 (耗时 %1s)").arg(QString::number(m_lastDuration, 'f', 1)));
             } else {
                 emit ocrError(errMsg.isEmpty() ? "OCR 识别失败" : errMsg);
             }
@@ -214,11 +269,12 @@ void OcrService::recognizeCurrentTask() {
     QString taskId = task->id;
     auto pages = task->pages;
     int total = static_cast<int>(pages.size());
-    m_totalProgress = total;
-    m_currentProgress = 0;
-    emit progressChanged(0, total);
+    setProgress(0, total, QString("正在准备批量识别 (共 %1 页)...").arg(total));
+    startProgressTimer();
 
-    QtConcurrent::run([this, taskId, pages, total]() {
+    bool filterPrinted = SettingsService::instance().filterPrintedText();
+
+    QtConcurrent::run([this, taskId, pages, total, filterPrinted]() {
         for (int i = 0; i < total; ++i) {
             if (m_cancelRequested) {
                 Logger::instance().info("OcrService", "Batch OCR cancelled by user.");
@@ -228,9 +284,14 @@ void OcrService::recognizeCurrentTask() {
             const auto& page = pages[i];
             QString imgPath = page.processedImagePath.isEmpty() ? page.originalImagePath : page.processedImagePath;
 
+            QMetaObject::invokeMethod(this, [this, i, total]() {
+                setProgress(i, total, QString("正在识别第 %1/%2 页...").arg(i + 1).arg(total));
+            }, Qt::BlockingQueuedConnection);
+
             OcrRequest req;
             req.imagePath = imgPath;
             req.lang = "ch";
+            req.filterPrintedText = filterPrinted;
 
             QString errMsg;
             auto resOpt = m_provider->recognize(req, &errMsg);
@@ -241,8 +302,7 @@ void OcrService::recognizeCurrentTask() {
                 QMetaObject::invokeMethod(this, [this, pageId = page.id, result, i, total]() {
                     TaskService::instance().updatePageOcrResult(pageId, result);
                     emit pageOcrCompleted(pageId);
-                    m_currentProgress = i + 1;
-                    emit progressChanged(i + 1, total);
+                    setProgress(i + 1, total, QString("已完成 %1/%2 页").arg(i + 1).arg(total));
                 }, Qt::BlockingQueuedConnection);
             } else {
                 Logger::instance().error("OcrService", QString("Page %1 recognition failed: %2").arg(page.id, errMsg));
@@ -250,6 +310,7 @@ void OcrService::recognizeCurrentTask() {
         }
 
         QMetaObject::invokeMethod(this, [this, taskId]() {
+            stopProgressTimer();
             setProcessing(false);
             emit taskOcrCompleted(taskId);
         }, Qt::QueuedConnection);

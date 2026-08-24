@@ -77,6 +77,7 @@ std::optional<OcrResult> PaddleOcrProvider::recognize(const OcrRequest& request,
     QJsonObject reqObj;
     reqObj["image_path"] = request.imagePath;
     reqObj["lang"] = request.lang;
+    reqObj["filter_printed_text"] = request.filterPrintedText;
     QByteArray body = QJsonDocument(reqObj).toJson(QJsonDocument::Compact);
 
     QNetworkReply* reply = manager.post(netReq, body);

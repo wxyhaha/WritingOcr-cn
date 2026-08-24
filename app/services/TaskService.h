@@ -70,6 +70,8 @@ public:
     // Save
     Q_INVOKABLE void triggerAutoSave();
     Q_INVOKABLE void saveNow();
+    Q_INVOKABLE void applyFilterPrintedToCurrentPage(bool filterPrinted);
+    Q_INVOKABLE void applyFilterPrintedToAllPages(bool filterPrinted);
 
     void addPageToCurrentTask(const Page& page);
     void updatePageOcrResult(const QString& pageId, const OcrResult& result);

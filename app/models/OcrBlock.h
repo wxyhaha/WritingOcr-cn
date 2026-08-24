@@ -44,11 +44,16 @@ struct OcrBlock {
     BoundingBox bbox;
     int lineIndex = 0;
     int blockIndex = 0;
-    QString type = "text";   // "text", "title", "punctuation"
-    QString status = "raw";  // "raw", "reviewed", "modified"
+    QString type = "handwriting";   // "handwriting", "printed", "text", "title"
+    double handwritingScore = 1.0;  // 0.0 ~ 1.0
+    QString status = "raw";         // "raw", "reviewed", "modified"
 
     bool isLowConfidence(double threshold = 0.75) const {
         return confidence < threshold;
+    }
+
+    bool isHandwriting() const {
+        return type != "printed" && handwritingScore >= 0.50;
     }
 
     QJsonObject toJson() const {
@@ -61,6 +66,7 @@ struct OcrBlock {
         obj["lineIndex"] = lineIndex;
         obj["blockIndex"] = blockIndex;
         obj["type"] = type;
+        obj["handwritingScore"] = handwritingScore;
         obj["status"] = status;
         return obj;
     }
@@ -74,7 +80,8 @@ struct OcrBlock {
         block.bbox = BoundingBox::fromJson(obj["bbox"].toObject());
         block.lineIndex = obj["lineIndex"].toInt();
         block.blockIndex = obj["blockIndex"].toInt();
-        block.type = obj["type"].toString("text");
+        block.type = obj["type"].toString("handwriting");
+        block.handwritingScore = obj["handwritingScore"].toDouble(1.0);
         block.status = obj["status"].toString("raw");
         return block;
     }

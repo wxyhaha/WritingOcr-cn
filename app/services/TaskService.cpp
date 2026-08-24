@@ -362,9 +362,7 @@ void TaskService::updatePageOcrResult(const QString& pageId, const OcrResult& re
         if (m_currentTask->pages[i].id == pageId) {
             auto& page = m_currentTask->pages[i];
             page.ocrResult = result;
-            if (page.editedText.isEmpty()) {
-                page.editedText = result.rawText;
-            }
+            page.editedText = result.rawText;
             page.status = PageStatus::Reviewing;
 
             DatabaseManager::instance().saveOcrResult(result);
@@ -386,6 +384,52 @@ void TaskService::updatePageOcrResult(const QString& pageId, const OcrResult& re
     m_taskListModel.updateTask(*m_currentTask);
 
     updateStatsAndNotify();
+}
+
+void TaskService::applyFilterPrintedToCurrentPage(bool filterPrinted) {
+    if (!m_currentTask || m_currentPageIndex < 0 || m_currentPageIndex >= m_currentTask->pages.size()) {
+        return;
+    }
+
+    auto& page = m_currentTask->pages[m_currentPageIndex];
+    if (page.ocrResult.blocks.isEmpty()) return;
+
+    QStringList lines;
+    for (const auto& block : page.ocrResult.blocks) {
+        if (!filterPrinted || block.isHandwriting()) {
+            lines.append(block.text);
+        }
+    }
+
+    page.editedText = lines.join("\n");
+    DatabaseManager::instance().updatePageEditedText(page.id, page.editedText);
+    m_pageListModel.updatePage(page);
+    m_hasUnsavedChanges = true;
+    updateStatsAndNotify();
+    emit currentPageChanged();
+}
+
+void TaskService::applyFilterPrintedToAllPages(bool filterPrinted) {
+    if (!m_currentTask) return;
+
+    for (int i = 0; i < m_currentTask->pages.size(); ++i) {
+        auto& page = m_currentTask->pages[i];
+        if (page.ocrResult.blocks.isEmpty()) continue;
+
+        QStringList lines;
+        for (const auto& block : page.ocrResult.blocks) {
+            if (!filterPrinted || block.isHandwriting()) {
+                lines.append(block.text);
+            }
+        }
+        page.editedText = lines.join("\n");
+        DatabaseManager::instance().updatePageEditedText(page.id, page.editedText);
+        m_pageListModel.updatePage(page);
+    }
+
+    m_hasUnsavedChanges = true;
+    updateStatsAndNotify();
+    emit currentPageChanged();
 }
 
 void TaskService::updateStatsAndNotify() {
