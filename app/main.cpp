@@ -93,7 +93,15 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, []() {
+        Logger::instance().info("Main", "Cleaning up services on exit...");
+        OcrService::instance().stopWorkerProcess();
+        LanUploadService::instance().stopServer();
+    });
+
     int ret = app.exec();
+    OcrService::instance().stopWorkerProcess();
+    LanUploadService::instance().stopServer();
     Logger::instance().info("Main", "=== Application Exited ===");
     return ret;
 }
