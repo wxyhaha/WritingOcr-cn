@@ -11,7 +11,8 @@ namespace HandwritingOCR {
 class LanUploadService : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool isRunning READ isRunning NOTIFY serverStatusChanged)
-    Q_PROPERTY(QString lanIp READ lanIp NOTIFY serverStatusChanged)
+    Q_PROPERTY(QString lanIp READ lanIp WRITE setLanIp NOTIFY serverStatusChanged)
+    Q_PROPERTY(QStringList availableLanIps READ availableLanIps NOTIFY ipsChanged)
     Q_PROPERTY(int port READ port NOTIFY serverStatusChanged)
     Q_PROPERTY(QString sessionToken READ sessionToken NOTIFY tokenChanged)
     Q_PROPERTY(QString uploadUrl READ uploadUrl NOTIFY urlChanged)
@@ -27,17 +28,20 @@ public:
 
     bool isRunning() const { return m_server && m_server->isListening(); }
     QString lanIp() const { return m_lanIp; }
+    QStringList availableLanIps() const { return m_availableIps; }
     int port() const { return m_port; }
     QString sessionToken() const { return m_sessionToken; }
     QString uploadUrl() const;
     QString qrCodeDataUrl() const { return m_qrCodeDataUrl; }
     int receivedImageCount() const { return m_receivedCount; }
 
+    Q_INVOKABLE void setLanIp(const QString& ip);
     Q_INVOKABLE void refreshSessionToken();
     Q_INVOKABLE void resetReceivedCount();
 
 signals:
     void serverStatusChanged();
+    void ipsChanged();
     void tokenChanged();
     void urlChanged();
     void qrCodeChanged();
@@ -54,11 +58,13 @@ private:
     LanUploadService(const LanUploadService&) = delete;
     LanUploadService& operator=(const LanUploadService&) = delete;
 
-    QString findLocalLanIp() const;
+    void scanAvailableIps();
+    QString findBestLanIp() const;
     void regenerateQrCode();
 
     LanHttpServer* m_server = nullptr;
-    QString m_lanIp;
+    QString m_lanIp = "127.0.0.1";
+    QStringList m_availableIps;
     int m_port = 8765;
     QString m_sessionToken;
     QString m_qrCodeDataUrl;

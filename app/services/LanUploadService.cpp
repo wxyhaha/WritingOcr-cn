@@ -1,13 +1,12 @@
 #include "LanUploadService.h"
 #include "SettingsService.h"
-#include "TaskService.h"
-#include "ImageService.h"
-#include "../infrastructure/network/QrCodeGenerator.h"
 #include "../infrastructure/logging/Logger.h"
+#include "../infrastructure/network/QrCodeGenerator.h"
 #include <QNetworkInterface>
-#include <QUuid>
+#include <QRandomGenerator>
 #include <QCoreApplication>
 #include <QDir>
+#include <QUuid>
 
 namespace HandwritingOCR {
 
@@ -28,14 +27,14 @@ LanUploadService::~LanUploadService() {
 
 void LanUploadService::init() {
     m_port = SettingsService::instance().lanUploadPort();
-    m_lanIp = findLocalLanIp();
+    scanAvailableIps();
+    m_lanIp = findBestLanIp();
     refreshSessionToken();
 
     // Set web directory path
     QString appDir = QCoreApplication::applicationDirPath();
     QString webDir = QDir(appDir).filePath("web-upload");
     if (!QDir(webDir).exists()) {
-        // Look in source tree if running from build folder
         webDir = QDir(appDir).filePath("../../web-upload");
         if (!QDir(webDir).exists()) {
             webDir = "d:/otherCode/WritingOcr-cn/web-upload";
@@ -48,7 +47,9 @@ void LanUploadService::init() {
     }
 }
 
-QString LanUploadService::findLocalLanIp() const {
+void LanUploadService::scanAvailableIps() {
+    m_availableIps.clear();
+
     const auto interfaces = QNetworkInterface::allInterfaces();
     for (const auto& iface : interfaces) {
         if (!(iface.flags() & QNetworkInterface::IsUp) ||
@@ -57,9 +58,13 @@ QString LanUploadService::findLocalLanIp() const {
             continue;
         }
 
-        // Filter out virtual adapters if possible
-        QString humanName = iface.humanReadableName().toLower();
-        if (humanName.contains("vethernet") || humanName.contains("virtual") || humanName.contains("vmware") || humanName.contains("wsl")) {
+        QString ifaceName = iface.humanReadableName().toLower();
+        // Skip virtual network adapters and proxy tunnels
+        if (ifaceName.contains("vethernet") || ifaceName.contains("virtual") ||
+            ifaceName.contains("vmware") || ifaceName.contains("wsl") ||
+            ifaceName.contains("meta") || ifaceName.contains("clash") ||
+            ifaceName.contains("tun") || ifaceName.contains("tap") ||
+            ifaceName.contains("tailscale") || ifaceName.contains("zerotier")) {
             continue;
         }
 
@@ -67,28 +72,62 @@ QString LanUploadService::findLocalLanIp() const {
         for (const auto& entry : entries) {
             if (entry.ip().protocol() == QAbstractSocket::IPv4Protocol && !entry.ip().isLoopback()) {
                 QString ipStr = entry.ip().toString();
-                if (ipStr.startsWith("192.168.") || ipStr.startsWith("10.") || ipStr.startsWith("172.")) {
-                    return ipStr;
+                // Filter out non-LAN and auto-config IPs
+                if (ipStr.startsWith("169.254.") || ipStr.startsWith("198.18.") || ipStr.startsWith("127.")) {
+                    continue;
+                }
+                if (!m_availableIps.contains(ipStr)) {
+                    m_availableIps.append(ipStr);
                 }
             }
         }
     }
 
-    // Fallback: search all IPv4 addresses
-    const auto allAddresses = QNetworkInterface::allAddresses();
-    for (const auto& addr : allAddresses) {
-        if (addr.protocol() == QAbstractSocket::IPv4Protocol && !addr.isLoopback()) {
-            return addr.toString();
-        }
+    if (m_availableIps.isEmpty()) {
+        m_availableIps.append("127.0.0.1");
     }
 
-    return "127.0.0.1";
+    emit ipsChanged();
+}
+
+QString LanUploadService::findBestLanIp() const {
+    if (m_availableIps.isEmpty()) return "127.0.0.1";
+
+    // Priority 1: 192.168.x.x (Most common home/office Wi-Fi and Ethernet)
+    for (const auto& ip : m_availableIps) {
+        if (ip.startsWith("192.168.")) return ip;
+    }
+
+    // Priority 2: 10.x.x.x
+    for (const auto& ip : m_availableIps) {
+        if (ip.startsWith("10.")) return ip;
+    }
+
+    // Priority 3: 172.16~31.x.x
+    for (const auto& ip : m_availableIps) {
+        if (ip.startsWith("172.")) return ip;
+    }
+
+    return m_availableIps.first();
+}
+
+void LanUploadService::setLanIp(const QString& ip) {
+    if (m_lanIp != ip && !ip.isEmpty()) {
+        m_lanIp = ip;
+        regenerateQrCode();
+        emit serverStatusChanged();
+        emit urlChanged();
+    }
 }
 
 bool LanUploadService::startServer(int port) {
     m_port = port;
-    m_lanIp = findLocalLanIp();
-    bool ok = m_server->start("0.0.0.0", static_cast<quint16>(m_port));
+    scanAvailableIps();
+    if (!m_availableIps.contains(m_lanIp)) {
+        m_lanIp = findBestLanIp();
+    }
+
+    bool ok = m_server->start("", static_cast<quint16>(m_port));
     regenerateQrCode();
     emit serverStatusChanged();
     return ok;
@@ -100,11 +139,18 @@ void LanUploadService::stopServer() {
 }
 
 QString LanUploadService::uploadUrl() const {
-    return QString("http://%1:%2/upload?t=%3").arg(m_lanIp).arg(m_port).arg(m_sessionToken);
+    return QString("http://%1:%2/?t=%3").arg(m_lanIp).arg(m_port).arg(m_sessionToken);
 }
 
 void LanUploadService::refreshSessionToken() {
-    m_sessionToken = QUuid::createUuid().toString(QUuid::WithoutBraces).left(12);
+    // Generate 12-char random alphanumeric token
+    const QString chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    m_sessionToken.clear();
+    for (int i = 0; i < 12; ++i) {
+        int index = QRandomGenerator::global()->bounded(chars.length());
+        m_sessionToken.append(chars.at(index));
+    }
+
     m_server->setSessionToken(m_sessionToken);
     regenerateQrCode();
     emit tokenChanged();
@@ -113,38 +159,23 @@ void LanUploadService::refreshSessionToken() {
 
 void LanUploadService::resetReceivedCount() {
     m_receivedCount = 0;
-    emit progressChanged(0, 10);
+    emit progressChanged(0, 0);
 }
 
 void LanUploadService::regenerateQrCode() {
     QString url = uploadUrl();
-    m_qrCodeDataUrl = QrCodeGenerator::generateQrCodeDataUrl(url, 280);
+    m_qrCodeDataUrl = QrCodeGenerator::generateQrCodeDataUrl(url);
+    Logger::instance().info("LanUploadService", QString("Generated QR Code for URL: %1").arg(url));
     emit qrCodeChanged();
 }
 
 void LanUploadService::onFilesReceived(const QStringList& tempFilePaths) {
-    Logger::instance().info("LanUploadService", QString("Received %1 uploaded images").arg(tempFilePaths.size()));
     m_receivedCount += tempFilePaths.size();
-
-    // If there is an active task, import images directly into it
-    auto& taskService = TaskService::instance();
-    if (!taskService.hasCurrentTask()) {
-        taskService.createNewTask();
-    }
-
-    QString currentTaskId = taskService.currentTaskId();
-    bool autoEnhance = SettingsService::instance().autoEnhance();
-    auto newPages = ImageService::instance().importImages(currentTaskId, tempFilePaths, autoEnhance);
-
-    for (const auto& page : newPages) {
-        taskService.addPageToCurrentTask(page);
-    }
-
+    Logger::instance().info("LanUploadService", QString("Received %1 images via mobile upload.").arg(tempFilePaths.size()));
     emit imagesUploaded(tempFilePaths);
 }
 
 void LanUploadService::onUploadProgressChanged(int current, int total) {
-    m_receivedCount = current;
     emit progressChanged(current, total);
 }
 
