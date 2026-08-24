@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>手写文章拍照上传</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="app-icon">📝</div>
+            <h1>手写文章批量上传</h1>
+            <p class="subtitle">照片将直接传输至电脑端进行本地识别</p>
+        </header>
+
+        <main class="main-content">
+            <div class="upload-box" id="dropArea">
+                <div class="upload-actions">
+                    <label class="btn btn-primary" for="cameraInput">
+                        <span class="icon">📷</span> 拍照
+                    </label>
+                    <label class="btn btn-secondary" for="fileInput">
+                        <span class="icon">🖼️</span> 相册选择 (最多10张)
+                    </label>
+                </div>
+                <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+                <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" multiple style="display:none">
+            </div>
+
+            <div class="file-list-header" id="listHeader" style="display:none">
+                <span>已选图片 (<span id="selectedCount">0</span>/10)</span>
+                <button class="btn-clear" id="clearBtn">清空</button>
+            </div>
+
+            <div class="file-preview-grid" id="previewGrid"></div>
+
+            <div class="progress-section" id="progressSection" style="display:none">
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="progress-text" id="progressText">正在上传 0%...</div>
+            </div>
+
+            <div class="action-footer">
+                <button class="btn btn-submit" id="uploadBtn" disabled>
+                    确认上传到电脑
+                </button>
+            </div>
+
+            <div class="status-card" id="statusCard" style="display:none">
+                <div class="status-icon" id="statusIcon">✓</div>
+                <div class="status-msg" id="statusMsg">上传成功！电脑端已接收。</div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>局域网直传 · 无需连接公网 · 安全私密</p>
+        </footer>
+    </div>
+
+    <script src="/upload.js"></script>
+</body>
+</html>

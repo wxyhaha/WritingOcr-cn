@@ -1,0 +1,63 @@
+# Build directories
+build/
+build-*/
+bin/
+out/
+.cache/
+
+# CMake files
+CMakeUserPresets.json
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Visual Studio & MSVC
+*.user
+*.suo
+*.sln.docstates
+*.VC.db
+*.VC.opendb
+*.obj
+*.pdb
+*.ilk
+*.lib
+*.exp
+*.exe
+*.dll
+
+# Qt generated files
+*.moc
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*.qmlc
+*.jsc
+Makefile*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+
+# Test data & temporary files
+test_data/
+*.db
+*.db-shm
+*.db-wal
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS generated
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store

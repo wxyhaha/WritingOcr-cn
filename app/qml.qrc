@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/Main.qml</file>
+        <file>qml/pages/TaskHomeView.qml</file>
+        <file>qml/pages/ProofreadingView.qml</file>
+        <file>qml/components/ImageViewer.qml</file>
+        <file>qml/components/TextEditorView.qml</file>
+        <file>qml/components/PageSidebar.qml</file>
+        <file>qml/dialogs/QrCodeDialog.qml</file>
+        <file>qml/dialogs/ConfirmDialog.qml</file>
+        <file>qml/dialogs/SettingsDialog.qml</file>
+        <file>qml/dialogs/ExportDialog.qml</file>
+    </qresource>
+</RCC>
