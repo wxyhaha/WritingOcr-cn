@@ -6,149 +6,248 @@ import "dialogs"
 
 ApplicationWindow {
     id: window
-    width: 1240
-    height: 820
-    minimumWidth: 960
-    minimumHeight: 640
+    width: 1280
+    height: 840
+    minimumWidth: 1020
+    minimumHeight: 680
     visible: true
-    title: "手写中文文章数字化工具 (MVP)"
+    title: "手写中文文章数字化工具"
 
     color: "#f8fafc"
 
     property string currentView: "home" // "home" or "proofread"
 
-    // Header Navigation Bar
+    // Modern Header Navigation Bar
     header: Rectangle {
-        height: 52
+        height: 56
         color: "#ffffff"
         border.color: "#e2e8f0"
+        z: 100
+
+        // Subtle bottom border shadow
+        Rectangle {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: 1
+            color: "#e2e8f0"
+        }
 
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 20
-            anchors.rightMargin: 20
+            anchors.leftMargin: 24
+            anchors.rightMargin: 24
             spacing: 16
 
-            // App Logo & Title
+            // App Brand Logo & Title
             Row {
-                spacing: 8
-                Text { text: "✍️"; font.pixelSize: 22; anchors.verticalCenter: parent.verticalCenter }
-                Text {
-                    text: "手写文章数字化"
-                    font.bold: true
-                    font.pixelSize: 16
-                    color: "#0f172a"
+                spacing: 10
+                Layout.alignment: Qt.AlignVCenter
+
+                Rectangle {
+                    width: 32
+                    height: 32
+                    radius: 8
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#3b82f6" }
+                        GradientStop { position: 1.0; color: "#1d4ed8" }
+                    }
+                    Text {
+                        text: "✍️"
+                        font.pixelSize: 18
+                        anchors.centerIn: parent
+                    }
+                }
+
+                Column {
                     anchors.verticalCenter: parent.verticalCenter
+                    spacing: 1
+                    Row {
+                        spacing: 6
+                        Text {
+                            text: "手写文章数字化"
+                            font.bold: true
+                            font.pixelSize: 15
+                            color: "#0f172a"
+                        }
+                        Rectangle {
+                            width: 36
+                            height: 16
+                            radius: 8
+                            color: "#eff6ff"
+                            border.color: "#bfdbfe"
+                            anchors.verticalCenter: parent.verticalCenter
+                            Text {
+                                text: "PRO"
+                                font.pixelSize: 9
+                                font.bold: true
+                                color: "#2563eb"
+                                anchors.centerIn: parent
+                            }
+                        }
+                    }
                 }
             }
 
-            Rectangle { width: 1; height: 20; color: "#e2e8f0" }
+            Rectangle { width: 1; height: 22; color: "#e2e8f0"; Layout.leftMargin: 8; Layout.rightMargin: 8 }
 
-            // Navigation tabs
-            Button {
-                text: "📋 任务管理"
-                height: 34
-                background: Rectangle {
-                    color: window.currentView === "home" ? "#eff6ff" : "transparent"
-                    radius: 6
-                }
-                contentItem: Text {
-                    text: "📋 任务管理"
-                    font.bold: window.currentView === "home"
-                    color: window.currentView === "home" ? "#2563eb" : "#475569"
-                    font.pixelSize: 13
-                    anchors.centerIn: parent
-                }
-                onClicked: window.currentView = "home"
-            }
+            // Segmented Navigation Tabs
+            Rectangle {
+                height: 36
+                radius: 8
+                color: "#f1f5f9"
+                width: 220
+                Layout.alignment: Qt.AlignVCenter
 
-            Button {
-                text: "🔍 校对工作区"
-                height: 34
-                enabled: app.taskService.hasCurrentTask
-                background: Rectangle {
-                    color: window.currentView === "proofread" ? "#eff6ff" : "transparent"
-                    radius: 6
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 2
+                    spacing: 2
+
+                    // Tab 1: Home
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        radius: 6
+                        color: window.currentView === "home" ? "#ffffff" : "transparent"
+                        border.color: window.currentView === "home" ? "#e2e8f0" : "transparent"
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 6
+                            Text {
+                                text: "📋"
+                                font.pixelSize: 12
+                            }
+                            Text {
+                                text: "任务管理"
+                                font.bold: window.currentView === "home"
+                                font.pixelSize: 12
+                                color: window.currentView === "home" ? "#2563eb" : "#64748b"
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: window.currentView = "home"
+                        }
+                    }
+
+                    // Tab 2: Proofreading
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        radius: 6
+                        color: window.currentView === "proofread" ? "#ffffff" : "transparent"
+                        border.color: window.currentView === "proofread" ? "#e2e8f0" : "transparent"
+                        opacity: app.taskService.hasCurrentTask ? 1.0 : 0.45
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 6
+                            Text {
+                                text: "🔍"
+                                font.pixelSize: 12
+                            }
+                            Text {
+                                text: "校对工作区"
+                                font.bold: window.currentView === "proofread"
+                                font.pixelSize: 12
+                                color: window.currentView === "proofread" ? "#2563eb" : "#64748b"
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            enabled: app.taskService.hasCurrentTask
+                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: window.currentView = "proofread"
+                        }
+                    }
                 }
-                contentItem: Text {
-                    text: "🔍 校对工作区"
-                    font.bold: window.currentView === "proofread"
-                    color: window.currentView === "proofread" ? "#2563eb" : (app.taskService.hasCurrentTask ? "#475569" : "#94a3b8")
-                    font.pixelSize: 13
-                    anchors.centerIn: parent
-                }
-                onClicked: window.currentView = "proofread"
             }
 
             Item { Layout.fillWidth: true }
 
-            // Live status pills
-            Rectangle {
-                height: 28
-                radius: 14
-                color: app.ocrService.isWorkerRunning ? "#ecfdf5" : "#fef2f2"
-                border.color: app.ocrService.isWorkerRunning ? "#a7f3d0" : "#fecaca"
-                width: ocrStatusText.implicitWidth + 24
+            // Right Status and Tools
+            Row {
+                spacing: 10
+                Layout.alignment: Qt.AlignVCenter
 
-                Row {
-                    anchors.centerIn: parent
-                    spacing: 6
-                    Rectangle {
-                        width: 8
-                        height: 8
-                        radius: 4
-                        color: app.ocrService.isWorkerRunning ? "#10b981" : "#ef4444"
-                        anchors.verticalCenter: parent.verticalCenter
+                // Live OCR status indicator pill
+                Rectangle {
+                    height: 30
+                    radius: 15
+                    color: app.ocrService.isWorkerRunning ? "#ecfdf5" : "#fef2f2"
+                    border.color: app.ocrService.isWorkerRunning ? "#a7f3d0" : "#fecaca"
+                    width: ocrStatusText.implicitWidth + 28
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 6
+                        Rectangle {
+                            width: 7
+                            height: 7
+                            radius: 3.5
+                            color: app.ocrService.isWorkerRunning ? "#10b981" : "#ef4444"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            id: ocrStatusText
+                            text: app.ocrService.isWorkerRunning ? "OCR 就绪" : "OCR 正在启动"
+                            font.pixelSize: 11
+                            font.bold: true
+                            color: app.ocrService.isWorkerRunning ? "#047857" : "#b91c1c"
+                        }
                     }
-                    Text {
-                        id: ocrStatusText
-                        text: app.ocrService.isWorkerRunning ? "OCR 就绪" : "OCR 未连接"
-                        font.pixelSize: 11
-                        font.bold: true
-                        color: app.ocrService.isWorkerRunning ? "#065f46" : "#991b1b"
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: settingsDialog.open()
+                        ToolTip.visible: containsMouse
+                        ToolTip.text: app.ocrService.workerStatusMessage || "本地 PaddleOCR 引擎状态"
+                        ToolTip.delay: 300
                     }
                 }
 
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
+                // Mobile QR button
+                Button {
+                    height: 32
+                    anchors.verticalCenter: parent.verticalCenter
+                    background: Rectangle {
+                        color: "#f8fafc"
+                        border.color: "#cbd5e1"
+                        radius: 6
+                    }
+                    contentItem: Row {
+                        anchors.centerIn: parent
+                        spacing: 5
+                        Text { text: "📱"; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: "手机扫码"; font.pixelSize: 12; font.bold: true; color: "#334155"; anchors.verticalCenter: parent.verticalCenter }
+                    }
+                    onClicked: qrCodeDialog.open()
+                }
+
+                // Settings button
+                Button {
+                    height: 32
+                    anchors.verticalCenter: parent.verticalCenter
+                    background: Rectangle {
+                        color: "#f8fafc"
+                        border.color: "#cbd5e1"
+                        radius: 6
+                    }
+                    contentItem: Row {
+                        anchors.centerIn: parent
+                        spacing: 5
+                        Text { text: "⚙️"; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: "设置"; font.pixelSize: 12; color: "#334155"; anchors.verticalCenter: parent.verticalCenter }
+                    }
                     onClicked: settingsDialog.open()
                 }
-            }
-
-            Button {
-                text: "📱 手机扫码"
-                height: 32
-                background: Rectangle {
-                    color: "#f1f5f9"
-                    border.color: "#cbd5e1"
-                    radius: 6
-                }
-                contentItem: Text {
-                    text: "📱 手机扫码"
-                    color: "#334155"
-                    font.pixelSize: 12
-                    font.bold: true
-                    anchors.centerIn: parent
-                }
-                onClicked: qrCodeDialog.open()
-            }
-
-            Button {
-                text: "⚙️ 设置"
-                height: 32
-                background: Rectangle {
-                    color: "#f8fafc"
-                    border.color: "#cbd5e1"
-                    radius: 6
-                }
-                contentItem: Text {
-                    text: "⚙️ 设置"
-                    color: "#334155"
-                    font.pixelSize: 12
-                    anchors.centerIn: parent
-                }
-                onClicked: settingsDialog.open()
             }
         }
     }
@@ -188,16 +287,16 @@ ApplicationWindow {
         }
     }
 
-    // Toast Notification Banner
+    // Modern Floating Toast Notification Banner
     Rectangle {
         id: toast
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        anchors.topMargin: 20
-        height: 40
+        anchors.topMargin: 16
+        height: 42
         radius: 8
         color: toastType === "error" ? "#ef4444" : (toastType === "warning" ? "#f59e0b" : "#10b981")
-        width: Math.min(toastText.implicitWidth + 40, parent.width - 40)
+        width: Math.min(toastContentRow.implicitWidth + 36, parent.width - 40)
         opacity: 0
         visible: opacity > 0
         z: 9999
@@ -205,21 +304,31 @@ ApplicationWindow {
         property string toastType: "info"
 
         Behavior on opacity {
-            NumberAnimation { duration: 250 }
+            NumberAnimation { duration: 220; easing.type: Easing.OutQuad }
         }
 
-        Text {
-            id: toastText
+        Row {
+            id: toastContentRow
             anchors.centerIn: parent
-            text: ""
-            color: "white"
-            font.bold: true
-            font.pixelSize: 13
+            spacing: 8
+            Text {
+                text: toast.toastType === "error" ? "❌" : (toast.toastType === "warning" ? "⚠️" : "✅")
+                font.pixelSize: 13
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            Text {
+                id: toastText
+                text: ""
+                color: "white"
+                font.bold: true
+                font.pixelSize: 13
+                anchors.verticalCenter: parent.verticalCenter
+            }
         }
 
         Timer {
             id: toastTimer
-            interval: 3500
+            interval: 3200
             onTriggered: toast.opacity = 0
         }
 

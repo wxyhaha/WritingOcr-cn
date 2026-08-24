@@ -24,6 +24,8 @@ QVariant TaskListModel::data(const QModelIndex& index, int role) const {
         case PageCountRole:          return task.pageCount;
         case TotalCharactersRole:    return task.totalCharacters;
         case LowConfidenceCountRole: return task.lowConfidenceCount;
+        case CoverThumbnailRole:     return task.coverThumbnailPath;
+        case CoverImageRole:         return task.coverImagePath;
         default:                     return QVariant();
     }
 }
@@ -38,6 +40,8 @@ QHash<int, QByteArray> TaskListModel::roleNames() const {
     roles[PageCountRole] = "pageCount";
     roles[TotalCharactersRole] = "totalCharacters";
     roles[LowConfidenceCountRole] = "lowConfidenceCount";
+    roles[CoverThumbnailRole] = "coverThumbnail";
+    roles[CoverImageRole] = "coverImage";
     return roles;
 }
 
@@ -45,12 +49,14 @@ void TaskListModel::setTasks(const QVector<Task>& tasks) {
     beginResetModel();
     m_tasks = tasks;
     endResetModel();
+    emit countChanged();
 }
 
 void TaskListModel::addTask(const Task& task) {
     beginInsertRows(QModelIndex(), 0, 0);
     m_tasks.prepend(task);
     endInsertRows();
+    emit countChanged();
 }
 
 void TaskListModel::updateTask(const Task& task) {
@@ -70,6 +76,7 @@ void TaskListModel::removeTask(const QString& taskId) {
             beginRemoveRows(QModelIndex(), i, i);
             m_tasks.removeAt(i);
             endRemoveRows();
+            emit countChanged();
             break;
         }
     }

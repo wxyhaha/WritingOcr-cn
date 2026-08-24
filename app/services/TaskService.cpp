@@ -343,6 +343,10 @@ void TaskService::addPageToCurrentTask(const Page& page) {
 
     m_currentTask->pages.append(page);
     m_currentTask->pageCount = static_cast<int>(m_currentTask->pages.size());
+    if (m_currentTask->coverThumbnailPath.isEmpty() && !page.thumbnailPath.isEmpty()) {
+        m_currentTask->coverThumbnailPath = page.thumbnailPath;
+        m_currentTask->coverImagePath = page.originalImagePath;
+    }
     DatabaseManager::instance().insertPage(page);
     DatabaseManager::instance().updateTask(*m_currentTask);
 

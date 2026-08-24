@@ -289,7 +289,11 @@ QVector<Task> DatabaseManager::getAllTasks() {
     QMutexLocker locker(&m_mutex);
     QVector<Task> list;
     QSqlQuery q(m_db);
-    q.prepare("SELECT id, title, created_at, updated_at, status, page_count, total_characters, low_confidence_count FROM tasks ORDER BY updated_at DESC");
+    q.prepare("SELECT t.id, t.title, t.created_at, t.updated_at, t.status, t.page_count, t.total_characters, t.low_confidence_count, "
+              "(SELECT thumbnail_path FROM pages WHERE task_id = t.id ORDER BY page_index ASC LIMIT 1) AS cover_thumbnail_path, "
+              "(SELECT original_image_path FROM pages WHERE task_id = t.id ORDER BY page_index ASC LIMIT 1) AS cover_image_path "
+              "FROM tasks t "
+              "ORDER BY t.updated_at DESC");
 
     if (q.exec()) {
         while (q.next()) {
@@ -302,6 +306,8 @@ QVector<Task> DatabaseManager::getAllTasks() {
             task.pageCount = q.value("page_count").toInt();
             task.totalCharacters = q.value("total_characters").toInt();
             task.lowConfidenceCount = q.value("low_confidence_count").toInt();
+            task.coverThumbnailPath = q.value("cover_thumbnail_path").toString();
+            task.coverImagePath = q.value("cover_image_path").toString();
             list.append(task);
         }
     }

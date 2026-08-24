@@ -51,6 +51,8 @@ struct Task {
     int pageCount = 0;
     int totalCharacters = 0;
     int lowConfidenceCount = 0;
+    QString coverThumbnailPath;
+    QString coverImagePath;
     QVector<Page> pages;
 
     QJsonObject toJson() const {

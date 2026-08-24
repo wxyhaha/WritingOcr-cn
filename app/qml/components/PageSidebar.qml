@@ -18,45 +18,66 @@ Item {
         border.color: "#e2e8f0"
     }
 
-    Column {
+    ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
         // Sidebar Header
         Rectangle {
-            width: parent.width
-            height: 44
-            color: "#f1f5f9"
+            Layout.fillWidth: true
+            height: 48
+            color: "#ffffff"
             border.color: "#e2e8f0"
 
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 12
+                anchors.leftMargin: 14
                 anchors.rightMargin: 12
                 spacing: 8
 
-                Text {
-                    text: "页面列表"
-                    font.bold: true
-                    font.pixelSize: 13
-                    color: "#334155"
+                Row {
+                    spacing: 6
                     Layout.alignment: Qt.AlignVCenter
+
+                    Text {
+                        text: "页面"
+                        font.bold: true
+                        font.pixelSize: 13
+                        color: "#0f172a"
+                    }
+
+                    Rectangle {
+                        height: 18
+                        radius: 9
+                        color: "#f1f5f9"
+                        width: countText.implicitWidth + 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        Text {
+                            id: countText
+                            text: `${app.taskService.currentTaskPageCount}`
+                            font.pixelSize: 10
+                            font.bold: true
+                            color: "#64748b"
+                            anchors.centerIn: parent
+                        }
+                    }
                 }
 
                 Item { Layout.fillWidth: true }
 
                 Button {
-                    text: "+ 添加"
                     height: 28
                     Layout.alignment: Qt.AlignVCenter
                     background: Rectangle {
-                        color: "#e2e8f0"
-                        radius: 4
+                        color: parent.hovered ? "#e2e8f0" : "#f1f5f9"
+                        border.color: "#cbd5e1"
+                        radius: 6
                     }
                     contentItem: Text {
-                        text: "+ 添加"
-                        color: "#0f172a"
-                        font.pixelSize: 12
+                        text: "➕ 加页"
+                        color: "#334155"
+                        font.pixelSize: 11
+                        font.bold: true
                         anchors.centerIn: parent
                     }
                     onClicked: root.addPagesRequested()
@@ -67,30 +88,45 @@ Item {
         // Thumbnails ListView
         ListView {
             id: listView
-            width: parent.width
-            height: parent.height - 44
+            Layout.fillWidth: true
+            Layout.fillHeight: true
             clip: true
-            spacing: 12
+            spacing: 10
             topMargin: 12
             bottomMargin: 12
             model: root.pageModel
 
             delegate: Item {
                 width: listView.width - 24
-                height: 140
+                height: 148
                 x: 12
 
                 property bool isCurrent: index === root.currentIndex
 
                 Rectangle {
+                    id: cardBg
                     anchors.fill: parent
-                    radius: 8
-                    color: isCurrent ? "#ffffff" : "#f8fafc"
+                    radius: 10
+                    color: isCurrent ? "#ffffff" : (thumbMouseArea.containsMouse ? "#ffffff" : "#f8fafc")
                     border.width: isCurrent ? 2 : 1
-                    border.color: isCurrent ? "#2563eb" : "#cbd5e1"
-                    layer.enabled: isCurrent
+                    border.color: isCurrent ? "#2563eb" : (thumbMouseArea.containsMouse ? "#93c5fd" : "#e2e8f0")
+
+                    Behavior on border.color { ColorAnimation { duration: 150 } }
+
+                    // Active left indicator bar
+                    Rectangle {
+                        visible: isCurrent
+                        anchors.left: parent.left
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        anchors.margins: 4
+                        width: 3
+                        radius: 1.5
+                        color: "#2563eb"
+                    }
 
                     MouseArea {
+                        id: thumbMouseArea
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
@@ -100,22 +136,24 @@ Item {
                     Image {
                         id: thumbImage
                         anchors.fill: parent
-                        anchors.margins: 4
+                        anchors.margins: 6
+                        anchors.leftMargin: isCurrent ? 10 : 6
                         source: (model.thumbnailPath && model.thumbnailPath !== "") ? app.localFileToUrl(model.thumbnailPath) : (model.originalImagePath ? app.localFileToUrl(model.originalImagePath) : "")
                         fillMode: Image.PreserveAspectFit
                         asynchronous: true
                         smooth: true
                     }
 
-                    // Page Index Badge
+                    // Page Index Floating Badge
                     Rectangle {
                         anchors.left: parent.left
                         anchors.top: parent.top
                         anchors.margins: 6
+                        anchors.leftMargin: isCurrent ? 10 : 6
                         width: 24
                         height: 20
-                        radius: 4
-                        color: isCurrent ? "#2563eb" : "#475569"
+                        radius: 5
+                        color: isCurrent ? "#2563eb" : "#334155"
 
                         Text {
                             anchors.centerIn: parent
@@ -132,9 +170,9 @@ Item {
                         anchors.right: parent.right
                         anchors.top: parent.top
                         anchors.margins: 6
-                        height: 20
-                        radius: 10
-                        color: "#eab308"
+                        height: 18
+                        radius: 9
+                        color: "#f59e0b"
                         width: badgeText.implicitWidth + 10
 
                         Text {
@@ -147,25 +185,30 @@ Item {
                         }
                     }
 
-                    // Delete Page Button
+                    // Delete Page Button (smooth hover)
                     Button {
+                        visible: thumbMouseArea.containsMouse || hovered
                         anchors.right: parent.right
                         anchors.bottom: parent.bottom
                         anchors.margins: 6
                         width: 22
                         height: 22
                         background: Rectangle {
-                            color: "#fecaca"
+                            color: parent.hovered ? "#fee2e2" : "#ffffff"
+                            border.color: "#fca5a5"
                             radius: 11
                         }
                         contentItem: Text {
-                            text: "×"
+                            text: "✕"
                             color: "#dc2626"
                             font.bold: true
-                            font.pixelSize: 14
+                            font.pixelSize: 11
                             anchors.centerIn: parent
                         }
                         onClicked: root.pageDeleted(index)
+                        ToolTip.visible: hovered
+                        ToolTip.text: "删除此页"
+                        ToolTip.delay: 300
                     }
                 }
             }

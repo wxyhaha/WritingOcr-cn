@@ -8,6 +8,7 @@ namespace HandwritingOCR {
 
 class TaskListModel : public QAbstractListModel {
     Q_OBJECT
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
 
 public:
     enum TaskRoles {
@@ -18,7 +19,9 @@ public:
         StatusRole,
         PageCountRole,
         TotalCharactersRole,
-        LowConfidenceCountRole
+        LowConfidenceCountRole,
+        CoverThumbnailRole,
+        CoverImageRole
     };
 
     explicit TaskListModel(QObject* parent = nullptr);
@@ -32,6 +35,10 @@ public:
     void updateTask(const Task& task);
     void removeTask(const QString& taskId);
     const QVector<Task>& tasks() const { return m_tasks; }
+    int count() const { return static_cast<int>(m_tasks.size()); }
+
+signals:
+    void countChanged();
 
 private:
     QVector<Task> m_tasks;

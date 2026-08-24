@@ -15,7 +15,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: "#1e1e1e"
+        color: "#0f172a" // Sleek dark slate
     }
 
     Flickable {
@@ -84,11 +84,11 @@ Item {
                             width: Math.max(bW, 4)
                             height: Math.max(bH, 4)
 
-                            // Visual styling: Yellow for low confidence, Blue for selected, Muted dashed for printed
-                            border.width: isSel ? 3 : (isLow ? 2 : (isPrinted ? 1 : 0))
-                            border.color: isSel ? "#3b82f6" : (isLow ? "#eab308" : (isPrinted ? "#94a3b8" : "transparent"))
-                            color: isSel ? "#333b82f6" : (isLow ? "#22eab308" : (isPrinted ? "#1594a3b8" : "transparent"))
-                            radius: 2
+                            // Visual styling: Amber for low confidence, Blue for selected, Muted for printed
+                            border.width: isSel ? 2.5 : (isLow ? 2 : (isPrinted ? 1 : 0))
+                            border.color: isSel ? "#3b82f6" : (isLow ? "#f59e0b" : (isPrinted ? "#64748b" : "transparent"))
+                            color: isSel ? "#303b82f6" : (isLow ? "#25f59e0b" : (isPrinted ? "#1564748b" : "transparent"))
+                            radius: 3
 
                             visible: isLow || isSel || isPrinted
 
@@ -104,7 +104,7 @@ Item {
                                 }
 
                                 ToolTip.visible: containsMouse
-                                ToolTip.text: `${model.text}\n类型: ${model.isHandwriting ? "手写体" : "印刷体"}\n识别置信度: ${(model.confidence * 100).toFixed(1)}%`
+                                ToolTip.text: `${model.text}\n类型: ${model.isHandwriting ? "✍️ 手写体" : "🖨️ 印刷体"}\n识别置信度: ${(model.confidence * 100).toFixed(1)}%`
                                 ToolTip.delay: 200
                             }
                         }
@@ -126,7 +126,6 @@ Item {
         let prevScale = currentScale;
         currentScale = newScale;
 
-        // Maintain center focus during zoom
         let contentX = flickable.contentX;
         let contentY = flickable.contentY;
         let focalX = centerX !== undefined ? centerX : flickable.width / 2;
@@ -161,93 +160,103 @@ Item {
         let map = blockModel.getBlockMap(index);
         if (!map || map.bboxX === undefined) return;
 
-        let scaleX = overlayLayer.scaleX;
-        let scaleY = overlayLayer.scaleY;
+        let scaleX = imageItem.implicitWidth > 0 ? (imageWrapper.width / imageItem.implicitWidth) : 1.0;
+        let scaleY = imageItem.implicitHeight > 0 ? (imageWrapper.height / imageItem.implicitHeight) : 1.0;
 
-        let targetX = (container.width - imageWrapper.width) / 2 + (map.bboxX + map.bboxWidth / 2) * scaleX - flickable.width / 2;
-        let targetY = (container.height - imageWrapper.height) / 2 + (map.bboxY + map.bboxHeight / 2) * scaleY - flickable.height / 2;
+        let targetImageX = map.bboxX * scaleX;
+        let targetImageY = map.bboxY * scaleY;
 
-        flickable.contentX = Math.max(0, Math.min(container.width - flickable.width, targetX));
-        flickable.contentY = Math.max(0, Math.min(container.height - flickable.height, targetY));
+        let targetContainerX = imageWrapper.x + targetImageX;
+        let targetContainerY = imageWrapper.y + targetImageY;
+
+        flickable.contentX = Math.max(0, Math.min(flickable.contentWidth - flickable.width, targetContainerX - flickable.width / 2));
+        flickable.contentY = Math.max(0, Math.min(flickable.contentHeight - flickable.height, targetContainerY - flickable.height / 2));
     }
 
+    // Wheel zoom
     MouseArea {
         anchors.fill: parent
-        propagateComposedEvents: true
-        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-
+        acceptedButtons: Qt.NoButton
         onWheel: (wheel) => {
-            let factor = wheel.angleDelta.y > 0 ? 1.15 : 0.85;
-            root.zoom(factor, wheel.x, wheel.y);
-            wheel.accepted = true;
-        }
-
-        onDoubleClicked: (mouse) => {
-            if (Math.abs(root.currentScale - 1.0) < 0.1) {
-                root.fitToWindow();
-            } else {
-                root.resetOriginalSize();
+            if (wheel.angleDelta.y > 0) {
+                root.zoom(1.15, wheel.x, wheel.y);
+            } else if (wheel.angleDelta.y < 0) {
+                root.zoom(0.85, wheel.x, wheel.y);
             }
         }
     }
 
-    // Floating Zoom Controls Bar
+    // Modern Floating Glassmorphic Zoom HUD
     Rectangle {
-        anchors.right: parent.right
+        anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.margins: 16
-        height: 36
-        radius: 18
-        color: "#cc1f2937"
-        border.color: "#374151"
+        anchors.bottomMargin: 20
+        height: 38
+        radius: 19
+        color: "#d91e293b" // Translucent dark slate
+        border.color: "#334155"
         width: controlsRow.implicitWidth + 24
 
         Row {
             id: controlsRow
             anchors.centerIn: parent
-            spacing: 12
+            spacing: 10
 
             Button {
-                text: "−"
-                width: 24
-                height: 24
-                background: Rectangle { color: "transparent" }
-                contentItem: Text { text: "−"; color: "white"; font.bold: true; font.pixelSize: 16; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                width: 26
+                height: 26
+                background: Rectangle {
+                    color: parent.hovered ? "#334155" : "transparent"
+                    radius: 13
+                }
+                contentItem: Text { text: "−"; color: "white"; font.bold: true; font.pixelSize: 15; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: root.zoom(0.8)
+                ToolTip.visible: hovered
+                ToolTip.text: "缩小"
+                ToolTip.delay: 300
             }
 
             Text {
                 text: `${Math.round(root.currentScale * 100)}%`
-                color: "#e5e7eb"
+                color: "#e2e8f0"
                 font.pixelSize: 12
                 font.bold: true
                 anchors.verticalCenter: parent.verticalCenter
             }
 
             Button {
-                text: "+"
-                width: 24
-                height: 24
-                background: Rectangle { color: "transparent" }
-                contentItem: Text { text: "+"; color: "white"; font.bold: true; font.pixelSize: 16; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                width: 26
+                height: 26
+                background: Rectangle {
+                    color: parent.hovered ? "#334155" : "transparent"
+                    radius: 13
+                }
+                contentItem: Text { text: "+"; color: "white"; font.bold: true; font.pixelSize: 15; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: root.zoom(1.25)
+                ToolTip.visible: hovered
+                ToolTip.text: "放大"
+                ToolTip.delay: 300
             }
 
-            Rectangle { width: 1; height: 16; color: "#4b5563"; anchors.verticalCenter: parent.verticalCenter }
+            Rectangle { width: 1; height: 16; color: "#475569"; anchors.verticalCenter: parent.verticalCenter }
 
             Button {
-                text: "适应"
-                height: 24
-                background: Rectangle { color: "transparent" }
+                height: 26
+                background: Rectangle {
+                    color: parent.hovered ? "#334155" : "transparent"
+                    radius: 6
+                }
                 contentItem: Text { text: "适应窗口"; color: "#93c5fd"; font.pixelSize: 11; anchors.centerIn: parent }
                 onClicked: root.fitToWindow()
             }
 
             Button {
-                text: "100%"
-                height: 24
-                background: Rectangle { color: "transparent" }
-                contentItem: Text { text: "1:1"; color: "#93c5fd"; font.pixelSize: 11; anchors.centerIn: parent }
+                height: 26
+                background: Rectangle {
+                    color: parent.hovered ? "#334155" : "transparent"
+                    radius: 6
+                }
+                contentItem: Text { text: "1:1 原图"; color: "#93c5fd"; font.pixelSize: 11; anchors.centerIn: parent }
                 onClicked: root.resetOriginalSize()
             }
         }
