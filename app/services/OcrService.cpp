@@ -3,6 +3,7 @@
 #include "SettingsService.h"
 #include "ImageService.h"
 #include "../infrastructure/logging/Logger.h"
+#include "../infrastructure/utils/PathUtils.h"
 #include <QtConcurrent/QtConcurrent>
 #include <QCoreApplication>
 #include <QDir>
@@ -139,26 +140,10 @@ void OcrService::startWorkerProcess() {
         });
     }
 
-    QString appDir = QCoreApplication::applicationDirPath();
-    QString scriptPath = QDir(appDir).filePath("ocr-worker/main.py");
-    if (!QFile::exists(scriptPath)) {
-        // Look in source tree during development
-        scriptPath = QDir(appDir).filePath("../../ocr-worker/main.py");
-        if (!QFile::exists(scriptPath)) {
-            scriptPath = "d:/otherCode/WritingOcr-cn/ocr-worker/main.py";
-        }
-    }
-
-    QString pythonExe = "py";
+    QString scriptPath = PathUtils::findResourcePath("ocr-worker/main.py");
     QStringList args;
-    args << "-3.13" << scriptPath;
-
-    // Check for direct python path
-    if (QFile::exists("C:/Users/Administrator/AppData/Local/Programs/Python/Python313/python.exe")) {
-        pythonExe = "C:/Users/Administrator/AppData/Local/Programs/Python/Python313/python.exe";
-        args.clear();
-        args << scriptPath;
-    }
+    QString pythonExe = PathUtils::findPythonExecutable(&args);
+    args << scriptPath;
 
     QString scriptDir = QFileInfo(scriptPath).dir().absolutePath();
     m_workerProcess->setWorkingDirectory(scriptDir);

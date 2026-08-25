@@ -8,6 +8,7 @@
 #include "services/ExportService.h"
 #include "infrastructure/database/DatabaseManager.h"
 #include "infrastructure/logging/Logger.h"
+#include "infrastructure/utils/PathUtils.h"
 
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -84,11 +85,8 @@ int main(int argc, char *argv[]) {
 
     if (engine.rootObjects().isEmpty()) {
         // Fallback to loading directly from file if resource not bundled during dev
-        QString qmlPath = QDir(QCoreApplication::applicationDirPath()).filePath("../../app/qml/Main.qml");
+        QString qmlPath = PathUtils::findResourcePath("app/qml/Main.qml");
         if (QFile::exists(qmlPath)) {
-            engine.load(QUrl::fromLocalFile(qmlPath));
-        } else {
-            qmlPath = "d:/otherCode/WritingOcr-cn/app/qml/Main.qml";
             engine.load(QUrl::fromLocalFile(qmlPath));
         }
     }

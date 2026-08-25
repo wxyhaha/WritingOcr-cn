@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
     QCoreApplication app(argc, argv);
     std::cout << "=== Running Database & Storage Unit Tests ===" << std::endl;
 
-    QString testBaseDir = "d:/otherCode/WritingOcr-cn/test_data/test_storage";
+    QString testBaseDir = QDir::tempPath() + "/handwriting_ocr_test_storage";
     QDir(testBaseDir).removeRecursively();
 
     StorageService::instance().init(testBaseDir);

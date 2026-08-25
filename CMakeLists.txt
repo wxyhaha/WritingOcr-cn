@@ -56,6 +56,7 @@ set(SOURCES
     app/infrastructure/export/MarkdownExporter.h
     app/infrastructure/export/DocxExporter.cpp
     app/infrastructure/export/DocxExporter.h
+    app/infrastructure/utils/PathUtils.h
 
     # Services
     app/services/StorageService.cpp

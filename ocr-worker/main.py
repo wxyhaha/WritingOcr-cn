@@ -7,12 +7,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"
 )
 logger = logging.getLogger("ocr_worker")
+
+# Validate Python version and architecture
+if sys.version_info < (3, 10) or sys.version_info >= (3, 14):
+    logger.warning("Running on Python %s. For best stability with PaddlePaddle 3.x, use Python 3.10 ~ 3.13 (64-bit).", sys.version.split()[0])
+if sys.maxsize <= 2**32:
+    logger.error("32-bit Python detected! PaddlePaddle & PaddleOCR strictly require 64-bit Python (win_amd64).")
+    sys.exit(1)
 
 # Add current dir to sys.path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

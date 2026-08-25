@@ -209,7 +209,15 @@ class OCREngine:
 
     def _init_engine(self):
         try:
-            logger.info("Starting background PaddleOCR engine warmup...")
+            logger.info("Starting background PaddleOCR PP-OCRv6 engine warmup...")
+            try:
+                import paddlex
+            except ImportError:
+                raise RuntimeError(
+                    "未检测到高精度 PaddleX 运行库 (缺少 paddlex==3.7.2)。"
+                    "为保证手写中文识别最高精度，请执行: pip install -r requirements.txt 升级环境！"
+                )
+
             from paddleocr import PaddleOCR
             self.ocr = PaddleOCR(
                 lang="ch",
@@ -217,19 +225,50 @@ class OCREngine:
                 use_doc_unwarping=False,
                 use_textline_orientation=False
             )
+
+            if not hasattr(self.ocr, "predict"):
+                raise RuntimeError(
+                    "当前 PaddleOCR 版本过低，缺少高精度 PP-OCRv6 predict 接口。"
+                    "为保证手写中文识别最高精度，请执行: pip install -r requirements.txt 升级环境！"
+                )
+
             self.is_ready = True
             self._ready_event.set()
-            logger.info("PaddleOCR engine loaded and warm ready!")
+            logger.info("PaddleOCR PP-OCRv6 高精度引擎加载就绪！")
         except Exception as e:
-            logger.error(f"Failed to initialize PaddleOCR engine in warmup: {e}", exc_info=True)
-            self.is_ready = True
+            logger.error(f"PaddleOCR 高精度引擎初始化失败: {e}", exc_info=True)
+            self._init_error = str(e)
+            self.is_ready = False
             self._ready_event.set()
 
     def check_health(self) -> Dict[str, Any]:
+        paddlex_ver = "none"
+        paddleocr_ver = "none"
+        paddle_ver = "none"
+        try:
+            import paddle
+            paddle_ver = getattr(paddle, "__version__", "unknown")
+        except Exception:
+            pass
+        try:
+            import paddleocr
+            paddleocr_ver = getattr(paddleocr, "__version__", "unknown")
+        except Exception:
+            pass
+        try:
+            import paddlex
+            paddlex_ver = getattr(paddlex, "__version__", "unknown")
+        except Exception:
+            pass
+
         return {
-            "status": "ready" if self.is_ready else "warming_up",
+            "status": "ready" if self.is_ready else "error",
             "engine": self.engine_name,
-            "engine_version": self.engine_version,
+            "engine_version": "PP-OCRv6_medium",
+            "paddle_version": paddle_ver,
+            "paddleocr_version": paddleocr_ver,
+            "paddlex_version": paddlex_ver,
+            "error_detail": getattr(self, "_init_error", None) if not self.is_ready else None,
             "gpu_available": self.gpu_available,
             "is_ready": self.is_ready
         }
@@ -257,6 +296,13 @@ class OCREngine:
             logger.info("OCR request received while warming up, waiting for model ready...")
             self._ready_event.wait(timeout=15.0)
 
+        if not self.is_ready or self.ocr is None or not hasattr(self.ocr, "predict"):
+            err_msg = getattr(self, "_init_error", None) or (
+                "当前环境未配置高精度 PaddleX / PP-OCRv6 引擎。"
+                "为保障手写识别精度，拒绝静默降级。请执行: pip install -r requirements.txt 安装锁定的高精度环境！"
+            )
+            raise RuntimeError(err_msg)
+
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: {image_path}")
 
@@ -272,7 +318,7 @@ class OCREngine:
         temp_file_to_clean = None
         infer_path = image_path
 
-        # Downscale large mobile images (> 1920px) for high-speed inference
+        # Downscale large mobile images (> 1920px) for optimal PP-OCR receptive field and speed
         MAX_INFER_DIM = 1920
         max_dim = max(orig_width, orig_height)
         scale_factor = 1.0
@@ -289,16 +335,6 @@ class OCREngine:
             logger.info(f"Scaled image for fast OCR from ({orig_width}, {orig_height}) to ({new_w}, {new_h}), scale={scale_factor:.3f}")
 
         try:
-            if self.ocr is None:
-                from paddleocr import PaddleOCR
-                self.ocr = PaddleOCR(
-                    lang="ch",
-                    use_doc_orientation_classify=False,
-                    use_doc_unwarping=False,
-                    use_textline_orientation=False
-                )
-                self.is_ready = True
-
             raw_result = self.ocr.predict(infer_path)
 
             raw_blocks: List[Dict[str, Any]] = []

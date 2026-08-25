@@ -1,5 +1,6 @@
 #include "DocxExporter.h"
 #include "../logging/Logger.h"
+#include "../utils/PathUtils.h"
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -34,14 +35,13 @@ bool DocxExporter::exportDocument(const Task& task, const QString& outputPath, Q
     tmpJson.flush();
     QString tempJsonPath = tmpJson.fileName();
 
-    QString appDir = QCoreApplication::applicationDirPath();
-    QString scriptPath = QDir(appDir).filePath("scripts/export_docx.py");
-    if (!QFile::exists(scriptPath)) {
-        scriptPath = "d:/otherCode/WritingOcr-cn/scripts/export_docx.py";
-    }
+    QString scriptPath = PathUtils::findResourcePath("scripts/export_docx.py");
+    QStringList args;
+    QString pythonExe = PathUtils::findPythonExecutable(&args);
+    args << scriptPath << tempJsonPath << outputPath;
 
     QProcess process;
-    process.start("python", QStringList() << scriptPath << tempJsonPath << outputPath);
+    process.start(pythonExe, args);
     if (!process.waitForFinished(15000)) {
         process.kill();
         if (errorMsg) *errorMsg = "DOCX 导出进程超时";

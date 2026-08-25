@@ -1,4 +1,5 @@
 #include "QrCodeGenerator.h"
+#include "../utils/PathUtils.h"
 #include <QPainter>
 #include <QBuffer>
 #include <QProcess>
@@ -414,22 +415,12 @@ QString QrCodeGenerator::generateQrCodeSvg(const QString& text, int border) {
 
 QString QrCodeGenerator::generateQrCodeDataUrl(const QString& text, int targetSize) {
     // 1. Try python generator with standard qrcode library
-    QString appDir = QCoreApplication::applicationDirPath();
-    QString scriptPath = QDir(appDir).filePath("scripts/generate_qrcode.py");
-    if (!QFile::exists(scriptPath)) {
-        scriptPath = "d:/otherCode/WritingOcr-cn/scripts/generate_qrcode.py";
-    }
+    QString scriptPath = PathUtils::findResourcePath("scripts/generate_qrcode.py");
 
     if (QFile::exists(scriptPath)) {
-        QString pythonExe = "py";
         QStringList args;
-        args << "-3.13" << scriptPath << text;
-
-        if (QFile::exists("C:/Users/Administrator/AppData/Local/Programs/Python/Python313/python.exe")) {
-            pythonExe = "C:/Users/Administrator/AppData/Local/Programs/Python/Python313/python.exe";
-            args.clear();
-            args << scriptPath << text;
-        }
+        QString pythonExe = PathUtils::findPythonExecutable(&args);
+        args << scriptPath << text;
 
         QProcess proc;
         proc.start(pythonExe, args);

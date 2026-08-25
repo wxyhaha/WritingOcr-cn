@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
     QCoreApplication app(argc, argv);
     std::cout << "=== Running Exporters Unit Tests ===" << std::endl;
 
-    QString exportTestDir = "d:/otherCode/WritingOcr-cn/test_data/test_exports";
+    QString exportTestDir = QDir::tempPath() + "/handwriting_ocr_test_exports";
     QDir().mkpath(exportTestDir);
 
     Task task;

@@ -2,6 +2,7 @@
 #include "SettingsService.h"
 #include "../infrastructure/logging/Logger.h"
 #include "../infrastructure/network/QrCodeGenerator.h"
+#include "../infrastructure/utils/PathUtils.h"
 #include <QNetworkInterface>
 #include <QRandomGenerator>
 #include <QCoreApplication>
@@ -32,14 +33,7 @@ void LanUploadService::init() {
     refreshSessionToken();
 
     // Set web directory path
-    QString appDir = QCoreApplication::applicationDirPath();
-    QString webDir = QDir(appDir).filePath("web-upload");
-    if (!QDir(webDir).exists()) {
-        webDir = QDir(appDir).filePath("../../web-upload");
-        if (!QDir(webDir).exists()) {
-            webDir = "d:/otherCode/WritingOcr-cn/web-upload";
-        }
-    }
+    QString webDir = PathUtils::findResourcePath("web-upload");
     m_server->setWebRootDir(webDir);
 
     if (SettingsService::instance().lanUploadEnabled()) {
