@@ -41,22 +41,22 @@
 ---
 
 ### 2. 第一步：安装 Python OCR 依赖
-打开终端（PowerShell 或 CMD），进入项目根目录安装 Python 依赖：
+打开终端（PowerShell 或 CMD），进入项目根目录安装 Python 依赖（锁定的高精度 PP-OCRv6 依赖）：
 ```powershell
-pip install -r ocr-worker/requirements.txt
+pip install -r requirements.txt
 ```
 
 ---
 
 ### 3. 第二步：CMake 编译 C++ 桌面端
-打开 **x64 Native Tools Command Prompt for VS 2022**（或通过 PowerShell 加载 vcvars64.bat），执行构建：
+打开 **x64 Native Tools Command Prompt for VS 2022**（或直接运行 `build_and_run.bat`）：
 
 ```powershell
 # 1. 激活 MSVC 编译环境（如果在 VS 开发者终端中可跳过此行）
 call "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
 
-# 2. 配置 CMake（请将 CMAKE_PREFIX_PATH 替换为您新电脑上的实际 Qt 安装路径）
-cmake -B build -G Ninja -DCMAKE_PREFIX_PATH="C:/Qt/6.5.3/msvc2019_64" -DCMAKE_BUILD_TYPE=Release
+# 2. 配置 CMake（若 Qt6 已在 PATH 中则无需指定前缀）
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
 # 3. 编译工程
 cmake --build build --config Release

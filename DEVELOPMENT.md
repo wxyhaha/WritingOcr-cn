@@ -19,7 +19,7 @@
 进入 `ocr-worker/` 目录并安装依赖：
 
 ```powershell
-py -3.13 -m pip install -r ocr-worker/requirements.txt
+pip install -r requirements.txt
 ```
 
 ---
@@ -29,19 +29,16 @@ py -3.13 -m pip install -r ocr-worker/requirements.txt
 在 Windows PowerShell 或命令提示符中执行：
 
 ```powershell
-# 1. 激活 Visual Studio 编译环境
-call "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat" 10.0.26100.0
+# 1. 激活 Visual Studio 编译环境（推荐使用 vcvars64.bat 自动配置）
+call "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
 
-# 2. 设置工具链 PATH (包含 MSVC、Windows SDK、Qt6、CMake、Ninja)
-set PATH=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64;C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64;C:\Qt\6.5.3\msvc2019_64\bin;C:\Users\Administrator\AppData\Roaming\Python\Python313\Scripts;C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Scripts;%PATH%
+# 2. CMake 配置（若 Qt 已加入 PATH，则无需手动指定 CMAKE_PREFIX_PATH）
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
-# 3. CMake 配置
-cmake -B build -G Ninja -DCMAKE_PREFIX_PATH=C:/Qt/6.5.3/msvc2019_64 -DCMAKE_BUILD_TYPE=Release
+# 3. 执行编译
+cmake --build build --config Release
 
-# 4. 执行编译
-cmake --build build
-
-# 5. 部署 Qt 运行时依赖 (首次构建或 QML 依赖变动时)
+# 4. (可选) 部署 Qt 运行时依赖
 windeployqt --qmldir app/qml build/HandwritingOCR.exe
 ```
 
@@ -74,7 +71,7 @@ ctest --test-dir build --output-on-failure
 ### 方式 B：手动分别启动（推荐调试使用）
 **终端 1 (OCR Worker)**:
 ```powershell
-py -3.13 ocr-worker/main.py
+python ocr-worker/main.py
 ```
 访问 `http://127.0.0.1:8766/docs` 可查看交互式 API 文档。
 
