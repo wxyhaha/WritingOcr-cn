@@ -10,6 +10,10 @@ Item {
     property var pageModel: null
     property var appController
     property int currentIndex: 0
+    readonly property int maxPageCount: 10
+    readonly property bool canAddPages: appController && appController.taskService
+                                          ? appController.taskService.currentTaskPageCount < maxPageCount
+                                          : false
 
     signal pageSelected(int index)
     signal pageDeleted(int index)
@@ -72,19 +76,23 @@ Item {
                     id: addPagesButton
                     Layout.preferredHeight: 28
                     Layout.alignment: Qt.AlignVCenter
+                    enabled: root.canAddPages
                     background: Rectangle {
-                        color: addPagesButton.hovered ? "#e2e8f0" : "#f1f5f9"
-                        border.color: "#cbd5e1"
+                        color: !addPagesButton.enabled ? "#f8fafc" : (addPagesButton.hovered ? "#e2e8f0" : "#f1f5f9")
+                        border.color: !addPagesButton.enabled ? "#e2e8f0" : "#cbd5e1"
                         radius: 6
                     }
                     contentItem: Text {
-                        text: "➕ 加页"
-                        color: "#334155"
+                        text: addPagesButton.enabled ? "➕ 加页" : "已达 10 页"
+                        color: addPagesButton.enabled ? "#334155" : "#94a3b8"
                         font.pixelSize: 11
                         font.bold: true
                         anchors.centerIn: parent
                     }
                     onClicked: root.addPagesRequested()
+                    ToolTip.visible: hovered && !enabled
+                    ToolTip.text: "单个任务最多包含 10 张图片"
+                    ToolTip.delay: 300
                 }
             }
         }
@@ -189,6 +197,63 @@ Item {
                             color: "#ffffff"
                             font.bold: true
                             font.pixelSize: 10
+                        }
+                    }
+
+                    // Page reorder controls
+                    Row {
+                        visible: thumbMouseArea.containsMouse || moveUpButton.hovered || moveDownButton.hovered
+                        anchors.left: parent.left
+                        anchors.bottom: parent.bottom
+                        anchors.margins: 6
+                        spacing: 4
+
+                        Button {
+                            id: moveUpButton
+                            width: 24
+                            height: 22
+                            enabled: pageDelegate.index > 0
+                            background: Rectangle {
+                                color: moveUpButton.enabled && moveUpButton.hovered ? "#dbeafe" : "#ffffff"
+                                border.color: moveUpButton.enabled ? "#bfdbfe" : "#e2e8f0"
+                                radius: 5
+                            }
+                            contentItem: Text {
+                                text: "↑"
+                                color: moveUpButton.enabled ? "#2563eb" : "#cbd5e1"
+                                font.bold: true
+                                font.pixelSize: 13
+                                anchors.centerIn: parent
+                            }
+                            Accessible.name: `上移第 ${pageDelegate.index + 1} 页`
+                            ToolTip.visible: hovered
+                            ToolTip.text: enabled ? "上移页面" : "已是第一页"
+                            ToolTip.delay: 300
+                            onClicked: root.appController.taskService.reorderPages(pageDelegate.index, pageDelegate.index - 1)
+                        }
+
+                        Button {
+                            id: moveDownButton
+                            width: 24
+                            height: 22
+                            enabled: pageDelegate.index < root.appController.taskService.currentTaskPageCount - 1
+                            background: Rectangle {
+                                color: moveDownButton.enabled && moveDownButton.hovered ? "#dbeafe" : "#ffffff"
+                                border.color: moveDownButton.enabled ? "#bfdbfe" : "#e2e8f0"
+                                radius: 5
+                            }
+                            contentItem: Text {
+                                text: "↓"
+                                color: moveDownButton.enabled ? "#2563eb" : "#cbd5e1"
+                                font.bold: true
+                                font.pixelSize: 13
+                                anchors.centerIn: parent
+                            }
+                            Accessible.name: `下移第 ${pageDelegate.index + 1} 页`
+                            ToolTip.visible: hovered
+                            ToolTip.text: enabled ? "下移页面" : "已是最后一页"
+                            ToolTip.delay: 300
+                            onClicked: root.appController.taskService.reorderPages(pageDelegate.index, pageDelegate.index + 1)
                         }
                     }
 

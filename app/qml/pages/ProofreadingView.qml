@@ -17,19 +17,28 @@ Item {
 
     property string saveIndicatorText: "✓ 已自动保存"
     property color saveIndicatorColor: "#059669"
+    property bool saveFailed: false
+    property int pendingDeletePageIndex: -1
+    property bool textAnnotationsStale: false
 
     Timer {
         id: saveIndicatorTimer
         interval: 2400
         onTriggered: {
-            root.saveIndicatorText = "✓ 已自动保存";
-            root.saveIndicatorColor = "#059669";
+            if (!root.saveFailed) {
+                root.saveIndicatorText = "✓ 已自动保存";
+                root.saveIndicatorColor = "#059669";
+            }
         }
     }
 
     Connections {
         target: root.appController.taskService
+        function onCurrentPageChanged() {
+            root.textAnnotationsStale = false;
+        }
         function onTaskSaved() {
+            root.saveFailed = false;
             root.saveIndicatorText = "✓ 已保存";
             root.saveIndicatorColor = "#059669";
             saveIndicatorTimer.restart();
@@ -38,9 +47,19 @@ Item {
             if (message.indexOf("保存") < 0) {
                 return;
             }
+            root.saveFailed = true;
             root.saveIndicatorText = "⚠ 保存失败";
             root.saveIndicatorColor = "#dc2626";
-            saveIndicatorTimer.restart();
+            saveIndicatorTimer.stop();
+        }
+    }
+
+    Connections {
+        target: root.appController.ocrService
+        function onPageOcrCompleted(pageId) {
+            if (pageId === root.appController.taskService.currentPageId) {
+                root.textAnnotationsStale = false;
+            }
         }
     }
 
@@ -56,6 +75,40 @@ Item {
         nameFilters: ["图片文件 (*.jpg *.jpeg *.png *.webp *.bmp)"]
         onAccepted: {
             root.appController.importFiles(selectedFiles);
+        }
+    }
+
+    Dialog {
+        id: deletePageDialog
+        title: "删除页面"
+        modal: true
+        anchors.centerIn: parent
+        width: Math.min(420, Math.max(340, parent.width - 32))
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        onAccepted: {
+            if (root.pendingDeletePageIndex >= 0) {
+                root.appController.taskService.deletePage(root.pendingDeletePageIndex);
+            }
+            root.pendingDeletePageIndex = -1;
+        }
+        onRejected: root.pendingDeletePageIndex = -1
+
+        contentItem: ColumnLayout {
+            spacing: 10
+            Text {
+                text: "确定删除当前页面吗？"
+                font.bold: true
+                font.pixelSize: 14
+                color: "#0f172a"
+                Layout.fillWidth: true
+            }
+            Text {
+                text: "页面图片、OCR 结果和校对文本都会从当前任务中移除，此操作不可撤销。"
+                font.pixelSize: 12
+                color: "#64748b"
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
         }
     }
 
@@ -241,7 +294,8 @@ Item {
                             root.appController.taskService.selectPage(index);
                         }
                         onPageDeleted: (index) => {
-                            root.appController.taskService.deletePage(index);
+                            root.pendingDeletePageIndex = index;
+                            deletePageDialog.open();
                         }
                         onAddPagesRequested: {
                             fileDialog.open();
@@ -274,7 +328,10 @@ Item {
                         appController: root.appController
                         text: root.appController.taskService.currentEditedText
                         blockModel: root.appController.ocrBlockListModel
+                        annotationsStale: root.textAnnotationsStale
                         onTextEdited: (newText) => {
+                            root.textAnnotationsStale = true;
+                            root.saveFailed = false;
                             root.saveIndicatorText = "● 待保存";
                             root.saveIndicatorColor = "#d97706";
                             saveIndicatorTimer.stop();

@@ -17,6 +17,9 @@ ApplicationWindow {
 
     property var appController: app
     property string currentView: "home" // "home" or "proofread"
+    readonly property bool workerStarting: !appController.ocrService.isWorkerRunning
+                                            && (appController.ocrService.workerStatusMessage.indexOf("初始化") >= 0
+                                                || appController.ocrService.workerStatusMessage.indexOf("启动") >= 0)
 
     // Modern Header Navigation Bar
     header: Rectangle {
@@ -188,8 +191,8 @@ ApplicationWindow {
                 Rectangle {
                     height: 30
                     radius: 15
-                    color: window.appController.ocrService.isWorkerRunning ? "#ecfdf5" : "#fef2f2"
-                    border.color: window.appController.ocrService.isWorkerRunning ? "#a7f3d0" : "#fecaca"
+                    color: window.appController.ocrService.isWorkerRunning ? "#ecfdf5" : (window.workerStarting ? "#fffbeb" : "#fef2f2")
+                    border.color: window.appController.ocrService.isWorkerRunning ? "#a7f3d0" : (window.workerStarting ? "#fde68a" : "#fecaca")
                     width: ocrStatusText.implicitWidth + 28
                     anchors.verticalCenter: parent.verticalCenter
 
@@ -200,22 +203,27 @@ ApplicationWindow {
                             width: 7
                             height: 7
                             radius: 3.5
-                            color: window.appController.ocrService.isWorkerRunning ? "#10b981" : "#ef4444"
+                            color: window.appController.ocrService.isWorkerRunning ? "#10b981" : (window.workerStarting ? "#f59e0b" : "#ef4444")
                             anchors.verticalCenter: parent.verticalCenter
                         }
                         Text {
                             id: ocrStatusText
-                            text: window.appController.ocrService.isWorkerRunning ? "OCR 就绪" : "OCR 正在启动"
+                            text: window.appController.ocrService.isWorkerRunning ? "OCR 就绪" : (window.workerStarting ? "OCR 启动中" : "OCR 未就绪")
                             font.pixelSize: 11
                             font.bold: true
-                            color: window.appController.ocrService.isWorkerRunning ? "#047857" : "#b91c1c"
+                            color: window.appController.ocrService.isWorkerRunning ? "#047857" : (window.workerStarting ? "#b45309" : "#b91c1c")
                         }
                     }
 
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: settingsDialog.open()
+                        onClicked: {
+                            if (!window.appController.ocrService.isWorkerRunning) {
+                                window.appController.ocrService.startWorkerProcess();
+                            }
+                            settingsDialog.open();
+                        }
                         ToolTip.visible: containsMouse
                         ToolTip.text: window.appController.ocrService.workerStatusMessage || "本地 PaddleOCR 引擎状态"
                         ToolTip.delay: 300

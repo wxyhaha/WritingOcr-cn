@@ -41,7 +41,10 @@ bool ExportService::exportCurrentTask(const QString& format, const QString& outp
         return false;
     }
 
-    taskService.saveNow();
+    if (!taskService.saveNow()) {
+        emit exportError("当前任务仍有未保存修改，已取消导出，请先重试保存。");
+        return false;
+    }
     Task* task = taskService.currentTaskPtr();
     if (!task) {
         emit exportError("任务数据为空。");

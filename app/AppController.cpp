@@ -29,6 +29,18 @@ AppController::AppController(QObject* parent) : QObject(parent) {
     connect(&OcrService::instance(), &OcrService::ocrError, this, [this](const QString& msg) {
         emit notifyUser(msg, "error");
     });
+    connect(&OcrService::instance(), &OcrService::taskOcrSummary, this,
+            [this](const QString&, int succeeded, int failed, bool cancelled) {
+                if (cancelled) {
+                    emit notifyUser(QString("批量 OCR 已取消：成功 %1 页，失败 %2 页。")
+                                        .arg(succeeded).arg(failed), "warning");
+                } else if (failed > 0) {
+                    emit notifyUser(QString("批量 OCR 完成：成功 %1 页，失败 %2 页，请检查失败页面后重新识别。")
+                                        .arg(succeeded).arg(failed), "warning");
+                } else {
+                    emit notifyUser(QString("批量 OCR 完成：共 %1 页。").arg(succeeded), "success");
+                }
+            });
     connect(&ExportService::instance(), &ExportService::exportError, this, [this](const QString& msg) {
         emit notifyUser(msg, "error");
     });

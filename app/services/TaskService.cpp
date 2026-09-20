@@ -141,7 +141,9 @@ Page* TaskService::currentPagePtr() {
 }
 
 QString TaskService::createNewTask(const QString& title) {
-    saveNow();
+    if (!saveNow()) {
+        return QString();
+    }
 
     QString taskId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     QString taskTitle = title.isEmpty() ? QString("%1 手写文章").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm")) : title;
@@ -174,7 +176,9 @@ QString TaskService::createNewTask(const QString& title) {
 }
 
 bool TaskService::loadTask(const QString& taskId) {
-    saveNow();
+    if (!saveNow()) {
+        return false;
+    }
 
     auto task = DatabaseManager::instance().getTask(taskId);
     if (!task) {
@@ -210,7 +214,9 @@ bool TaskService::loadTask(const QString& taskId) {
 }
 
 bool TaskService::closeCurrentTask() {
-    saveNow();
+    if (!saveNow()) {
+        return false;
+    }
     m_currentTask.reset();
     m_currentPageIndex = -1;
     m_pageListModel.setPages({});
@@ -272,7 +278,9 @@ bool TaskService::selectPage(int index) {
     }
 
     if (m_hasUnsavedChanges) {
-        saveNow();
+        if (!saveNow()) {
+            return false;
+        }
     }
 
     m_currentPageIndex = index;
@@ -358,16 +366,24 @@ void TaskService::reorderPages(int fromIndex, int toIndex) {
     Page p = m_currentTask->pages.takeAt(fromIndex);
     m_currentTask->pages.insert(toIndex, p);
 
+    bool persisted = true;
     for (int i = 0; i < m_currentTask->pages.size(); ++i) {
         m_currentTask->pages[i].pageIndex = i;
-        DatabaseManager::instance().updatePage(m_currentTask->pages[i]);
+        if (!DatabaseManager::instance().updatePage(m_currentTask->pages[i])) {
+            persisted = false;
+        }
     }
 
     m_pageListModel.setPages(m_currentTask->pages);
     m_currentPageIndex = toIndex;
-    DatabaseManager::instance().updateTask(*m_currentTask);
+    if (!DatabaseManager::instance().updateTask(*m_currentTask)) {
+        persisted = false;
+    }
     m_taskListModel.updateTask(*m_currentTask);
     emit currentPageChanged();
+    if (!persisted) {
+        emit taskError("页面顺序已更新到界面，但保存到数据库失败，请稍后重试。");
+    }
 }
 
 void TaskService::triggerAutoSave() {
@@ -378,9 +394,9 @@ void TaskService::onAutoSaveTimeout() {
     saveNow();
 }
 
-void TaskService::saveNow() {
+bool TaskService::saveNow() {
     if (!m_hasUnsavedChanges && (!m_currentTask || m_currentPageIndex < 0)) {
-        return;
+        return true;
     }
 
     if (m_currentTask) {
@@ -388,7 +404,7 @@ void TaskService::saveNow() {
             const auto& page = m_currentTask->pages[m_currentPageIndex];
             if (!DatabaseManager::instance().updatePageEditedText(page.id, page.editedText)) {
                 emit taskError("校对文本自动保存失败。");
-                return;
+                return false;
             }
         }
 
@@ -397,13 +413,15 @@ void TaskService::saveNow() {
         m_currentTask->pageCount = static_cast<int>(m_currentTask->pages.size());
         if (!DatabaseManager::instance().updateTask(*m_currentTask)) {
             emit taskError("任务统计信息保存失败。");
-            return;
+            return false;
         }
         m_taskListModel.updateTask(*m_currentTask);
 
         m_hasUnsavedChanges = false;
         emit taskSaved();
     }
+
+    return true;
 }
 
 void TaskService::addPageToCurrentTask(const Page& page) {

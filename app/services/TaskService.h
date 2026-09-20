@@ -69,7 +69,7 @@ public:
 
     // Save
     Q_INVOKABLE void triggerAutoSave();
-    Q_INVOKABLE void saveNow();
+    Q_INVOKABLE bool saveNow();
     Q_INVOKABLE void applyFilterPrintedToCurrentPage(bool filterPrinted);
     Q_INVOKABLE void applyFilterPrintedToAllPages(bool filterPrinted);
 

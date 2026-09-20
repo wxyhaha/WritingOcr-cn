@@ -246,6 +246,10 @@ void OcrService::recognizeCurrentPage() {
         QMetaObject::invokeMethod(this, [this, pageId, resultOpt, errMsg]() {
             stopProgressTimer();
             setProcessing(false);
+            if (m_cancelRequested.load()) {
+                setProgress(0, 1, "单页 OCR 已取消");
+                return;
+            }
             if (resultOpt.has_value()) {
                 auto result = *resultOpt;
                 result.pageId = pageId;
@@ -294,6 +298,8 @@ void OcrService::recognizeCurrentTask() {
     bool filterPrinted = SettingsService::instance().filterPrintedText();
 
     m_jobs.addFuture(QtConcurrent::run([this, taskId, pages, total, filterPrinted]() {
+        int succeeded = 0;
+        int failed = 0;
         for (int i = 0; i < total; ++i) {
             if (m_cancelRequested) {
                 Logger::instance().info("OcrService", "Batch OCR cancelled by user.");
@@ -316,6 +322,7 @@ void OcrService::recognizeCurrentTask() {
             auto resOpt = m_provider->recognize(req, &errMsg);
 
             if (resOpt.has_value()) {
+                ++succeeded;
                 auto result = *resOpt;
                 result.pageId = page.id;
                 QMetaObject::invokeMethod(this, [this, pageId = page.id, result, i, total]() {
@@ -324,13 +331,26 @@ void OcrService::recognizeCurrentTask() {
                     setProgress(i + 1, total, QString("已完成 %1/%2 页").arg(i + 1).arg(total));
                 }, Qt::QueuedConnection);
             } else {
+                ++failed;
                 Logger::instance().error("OcrService", QString("Page %1 recognition failed: %2").arg(page.id, errMsg));
+                QMetaObject::invokeMethod(this, [this, i, total, errMsg]() {
+                    setProgress(i + 1, total, QString("第 %1/%2 页识别失败：%3").arg(i + 1).arg(total).arg(errMsg));
+                }, Qt::QueuedConnection);
             }
         }
 
-        QMetaObject::invokeMethod(this, [this, taskId]() {
+        const bool cancelled = m_cancelRequested.load();
+        QMetaObject::invokeMethod(this, [this, taskId, succeeded, failed, cancelled, total]() {
             stopProgressTimer();
             setProcessing(false);
+            if (cancelled) {
+                setProgress(succeeded + failed, total,
+                            QString("批量 OCR 已取消：成功 %1 页，失败 %2 页").arg(succeeded).arg(failed));
+            } else {
+                setProgress(total, total,
+                            QString("批量 OCR 完成：成功 %1 页，失败 %2 页").arg(succeeded).arg(failed));
+            }
+            emit taskOcrSummary(taskId, succeeded, failed, cancelled);
             emit taskOcrCompleted(taskId);
         }, Qt::QueuedConnection);
     }));

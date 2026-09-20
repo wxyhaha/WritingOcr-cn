@@ -286,12 +286,15 @@ Dialog {
                     onClicked: {
                         let fmt = docxRadio.checked ? "docx" : (mdRadio.checked ? "md" : "txt");
                         let defaultPath = root.appController.exportService.getDefaultExportPath(fmt);
+                        let exported = false;
                         if (root.targetTaskId) {
-                            root.appController.exportService.exportTaskById(root.targetTaskId, fmt, defaultPath);
+                            exported = root.appController.exportService.exportTaskById(root.targetTaskId, fmt, defaultPath);
                         } else {
-                            root.appController.exportService.exportCurrentTask(fmt, defaultPath);
+                            exported = root.appController.exportService.exportCurrentTask(fmt, defaultPath);
                         }
-                        root.close();
+                        if (exported) {
+                            root.close();
+                        }
                     }
                 }
             }

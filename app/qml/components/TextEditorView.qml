@@ -13,6 +13,7 @@ Item {
     property int selectedIndex: blockModel ? blockModel.selectedIndex : -1
     property int editorFontSize: 15
     property bool isSearchOpen: false
+    property bool annotationsStale: false
 
     signal textEdited(string newText)
     signal blockRequested(int index)
@@ -427,6 +428,25 @@ Item {
                         onClicked: searchBar.replaceAll()
                     }
                 }
+            }
+        }
+
+        Rectangle {
+            visible: root.annotationsStale
+            Layout.fillWidth: true
+            Layout.preferredHeight: root.annotationsStale ? 30 : 0
+            color: "#fffbeb"
+            border.color: "#fde68a"
+            clip: true
+
+            Text {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                verticalAlignment: Text.AlignVCenter
+                text: "⚠ 文本已修改，OCR 标注可能已过期；重新识别可恢复框选对应关系"
+                color: "#92400e"
+                font.pixelSize: 11
+                elide: Text.ElideRight
             }
         }
 

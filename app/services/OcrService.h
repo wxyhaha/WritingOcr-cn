@@ -56,6 +56,7 @@ signals:
     void finishedDurationChanged();
     void pageOcrCompleted(const QString& pageId);
     void taskOcrCompleted(const QString& taskId);
+    void taskOcrSummary(const QString& taskId, int succeeded, int failed, bool cancelled);
     void ocrError(const QString& errorMessage);
 
 private slots:

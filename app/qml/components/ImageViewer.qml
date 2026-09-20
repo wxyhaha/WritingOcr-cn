@@ -67,10 +67,31 @@ Item {
                     }
                 }
 
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 8
+                    visible: !root.imagePath || imageItem.status === Image.Error
+                    Text {
+                        text: root.imagePath ? "图片加载失败" : "请选择一个页面"
+                        color: "#e2e8f0"
+                        font.bold: true
+                        font.pixelSize: 15
+                        anchors.horizontalCenter: parent.horizontalCenter
+                    }
+                    Text {
+                        text: root.imagePath ? "请检查文件是否存在，或重新导入图片" : "从左侧页面列表选择要查看的图片"
+                        color: "#94a3b8"
+                        font.pixelSize: 12
+                        anchors.horizontalCenter: parent.horizontalCenter
+                    }
+                }
+
                 // Overlay for OCR Bounding Boxes
                 Item {
                     id: overlayLayer
                     anchors.fill: parent
+                    rotation: root.imageRotation
+                    transformOrigin: Item.Center
                     visible: imageItem.status === Image.Ready && root.blockModel !== null
 
                     // Scale factors from original image pixels to displayed image pixels
