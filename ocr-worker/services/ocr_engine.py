@@ -202,6 +202,7 @@ class OCREngine:
         self.engine_version = "PP-OCRv5"
         self.is_ready = False
         self._ready_event = threading.Event()
+        self._inference_lock = threading.Lock()
         
         # Asynchronous background model warmup so HTTP server starts instantly (<0.2s)
         self._warmup_thread = threading.Thread(target=self._init_engine, daemon=True)
@@ -209,7 +210,7 @@ class OCREngine:
 
     def _init_engine(self):
         try:
-            logger.info("Starting background PaddleOCR PP-OCRv6 engine warmup...")
+            logger.info("Starting background PaddleOCR PP-OCRv5 engine warmup...")
             try:
                 import paddlex
             except ImportError:
@@ -228,13 +229,13 @@ class OCREngine:
 
             if not hasattr(self.ocr, "predict"):
                 raise RuntimeError(
-                    "当前 PaddleOCR 版本过低，缺少高精度 PP-OCRv6 predict 接口。"
+                    "当前 PaddleOCR 版本过低，缺少高精度 PP-OCRv5 predict 接口。"
                     "为保证手写中文识别最高精度，请执行: pip install -r requirements.txt 升级环境！"
                 )
 
             self.is_ready = True
             self._ready_event.set()
-            logger.info("PaddleOCR PP-OCRv6 高精度引擎加载就绪！")
+            logger.info("PaddleOCR PP-OCRv5 高精度引擎加载就绪！")
         except Exception as e:
             logger.error(f"PaddleOCR 高精度引擎初始化失败: {e}", exc_info=True)
             self._init_error = str(e)
@@ -261,10 +262,17 @@ class OCREngine:
         except Exception:
             pass
 
+        if self.is_ready:
+            status = "ready"
+        elif not self._ready_event.is_set():
+            status = "loading"
+        else:
+            status = "error"
+
         return {
-            "status": "ready" if self.is_ready else "error",
+            "status": status,
             "engine": self.engine_name,
-            "engine_version": "PP-OCRv6_medium",
+            "engine_version": self.engine_version,
             "paddle_version": paddle_ver,
             "paddleocr_version": paddleocr_ver,
             "paddlex_version": paddlex_ver,
@@ -279,11 +287,14 @@ class OCREngine:
         detect_orientation: bool = True, 
         filter_printed_text: bool = False
     ) -> Dict[str, Any]:
-        return self.predict(
-            image_path=image_path, 
-            detect_orientation=detect_orientation, 
-            filter_printed_text=filter_printed_text
-        )
+        # Paddle inference predictors are not guaranteed to be thread-safe.
+        # Serialize access even if multiple HTTP requests arrive concurrently.
+        with self._inference_lock:
+            return self.predict(
+                image_path=image_path,
+                detect_orientation=detect_orientation,
+                filter_printed_text=filter_printed_text
+            )
 
     def predict(
         self, 
@@ -298,7 +309,7 @@ class OCREngine:
 
         if not self.is_ready or self.ocr is None or not hasattr(self.ocr, "predict"):
             err_msg = getattr(self, "_init_error", None) or (
-                "当前环境未配置高精度 PaddleX / PP-OCRv6 引擎。"
+                "当前环境未配置高精度 PaddleX / PP-OCRv5 引擎。"
                 "为保障手写识别精度，拒绝静默降级。请执行: pip install -r requirements.txt 安装锁定的高精度环境！"
             )
             raise RuntimeError(err_msg)

@@ -22,6 +22,7 @@ public:
 
     void setSessionToken(const QString& token) { m_sessionToken = token; }
     QString sessionToken() const { return m_sessionToken; }
+    void resetReceivedCount() { m_receivedCount = 0; }
 
     void setWebRootDir(const QString& dir) { m_webRootDir = dir; }
 

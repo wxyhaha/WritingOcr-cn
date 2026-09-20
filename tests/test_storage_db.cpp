@@ -6,12 +6,18 @@
 #include "../app/infrastructure/logging/Logger.h"
 
 #include <iostream>
-#include <cassert>
 #include <QDir>
 #include <QFile>
 #include <QCoreApplication>
 
 using namespace HandwritingOCR;
+
+#define CHECK(condition) do { \
+    if (!(condition)) { \
+        std::cerr << "[FAIL] " #condition " at line " << __LINE__ << std::endl; \
+        return 1; \
+    } \
+} while (false)
 
 int main(int argc, char* argv[]) {
     QCoreApplication app(argc, argv);
@@ -33,14 +39,14 @@ int main(int argc, char* argv[]) {
     task.lowConfidenceCount = 5;
 
     bool insertOk = DatabaseManager::instance().insertTask(task);
-    assert(insertOk);
+    CHECK(insertOk);
     std::cout << "[PASS] Task insertion" << std::endl;
 
     // 2. Test Storage directories
     bool dirOk = StorageService::instance().ensureTaskDirs(task.id);
-    assert(dirOk);
-    assert(QDir(StorageService::instance().getTaskSourceDir(task.id)).exists());
-    assert(QDir(StorageService::instance().getTaskOcrDir(task.id)).exists());
+    CHECK(dirOk);
+    CHECK(QDir(StorageService::instance().getTaskSourceDir(task.id)).exists());
+    CHECK(QDir(StorageService::instance().getTaskOcrDir(task.id)).exists());
     std::cout << "[PASS] Storage directories creation" << std::endl;
 
     // 3. Test Pages Insertion
@@ -50,7 +56,7 @@ int main(int argc, char* argv[]) {
     page1.pageIndex = 0;
     page1.originalImagePath = StorageService::instance().getTaskSourceDir(task.id) + "/001.jpg";
     page1.status = PageStatus::Pending;
-    assert(DatabaseManager::instance().insertPage(page1));
+    CHECK(DatabaseManager::instance().insertPage(page1));
 
     Page page2;
     page2.id = "p2";
@@ -58,7 +64,7 @@ int main(int argc, char* argv[]) {
     page2.pageIndex = 1;
     page2.originalImagePath = StorageService::instance().getTaskSourceDir(task.id) + "/002.jpg";
     page2.status = PageStatus::Pending;
-    assert(DatabaseManager::instance().insertPage(page2));
+    CHECK(DatabaseManager::instance().insertPage(page2));
     std::cout << "[PASS] Pages insertion" << std::endl;
 
     // 4. Test OCR Results and Blocks Insertion
@@ -74,33 +80,35 @@ int main(int argc, char* argv[]) {
     blk.pageId = page1.id;
     blk.text = "今天天气很好";
     blk.confidence = 0.95;
+    blk.handwritingScore = 0.83;
     blk.bbox = {10, 20, 300, 40};
     ocr.blocks.append(blk);
 
-    assert(DatabaseManager::instance().saveOcrResult(ocr));
+    CHECK(DatabaseManager::instance().saveOcrResult(ocr));
     std::cout << "[PASS] Save OCR result & blocks" << std::endl;
 
     // 5. Test Querying
     auto retrievedTask = DatabaseManager::instance().getTask(task.id);
-    assert(retrievedTask != nullptr);
-    assert(retrievedTask->title == "测试任务 1");
+    CHECK(retrievedTask != nullptr);
+    CHECK(retrievedTask->title == "测试任务 1");
 
     auto retrievedPages = DatabaseManager::instance().getPagesByTaskId(task.id);
-    assert(retrievedPages.size() == 2);
+    CHECK(retrievedPages.size() == 2);
 
     auto retrievedOcr = DatabaseManager::instance().getOcrResultByPageId(page1.id);
-    assert(retrievedOcr != nullptr);
-    assert(retrievedOcr->blocks.size() == 1);
-    assert(retrievedOcr->blocks[0].text == "今天天气很好");
+    CHECK(retrievedOcr != nullptr);
+    CHECK(retrievedOcr->blocks.size() == 1);
+    CHECK(retrievedOcr->blocks[0].text == "今天天气很好");
+    CHECK(qAbs(retrievedOcr->blocks[0].handwritingScore - 0.83) < 0.001);
     std::cout << "[PASS] Query task, pages, and OCR structure" << std::endl;
 
     // 6. Test Cascade Task Deletion
-    assert(StorageService::instance().deleteEntireTaskDir(task.id));
-    assert(!QDir(StorageService::instance().getTaskDir(task.id)).exists());
-    assert(DatabaseManager::instance().deleteTask(task.id));
-    assert(DatabaseManager::instance().getTask(task.id) == nullptr);
-    assert(DatabaseManager::instance().getPagesByTaskId(task.id).isEmpty());
-    assert(DatabaseManager::instance().getOcrResultByPageId(page1.id) == nullptr);
+    CHECK(StorageService::instance().deleteEntireTaskDir(task.id));
+    CHECK(!QDir(StorageService::instance().getTaskDir(task.id)).exists());
+    CHECK(DatabaseManager::instance().deleteTask(task.id));
+    CHECK(DatabaseManager::instance().getTask(task.id) == nullptr);
+    CHECK(DatabaseManager::instance().getPagesByTaskId(task.id).isEmpty());
+    CHECK(DatabaseManager::instance().getOcrResultByPageId(page1.id) == nullptr);
     std::cout << "[PASS] Cascade deletion of task, files, and DB records" << std::endl;
 
     std::cout << "All Database & Storage tests passed successfully!" << std::endl;

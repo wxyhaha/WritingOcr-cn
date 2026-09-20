@@ -5,6 +5,7 @@
 #include <QDesktopServices>
 #include <QFileInfo>
 #include <QDir>
+#include <QFile>
 
 namespace HandwritingOCR {
 
@@ -13,6 +14,11 @@ AppController::AppController(QObject* parent) : QObject(parent) {
     connect(&LanUploadService::instance(), &LanUploadService::imagesUploaded, this, [this](const QStringList& tempFilePaths) {
         Logger::instance().info("AppController", QString("Received %1 images from mobile upload, importing into task...").arg(tempFilePaths.size()));
         importFilePaths(tempFilePaths);
+        for (const auto& tempPath : tempFilePaths) {
+            if (!QFile::remove(tempPath)) {
+                Logger::instance().warn("AppController", QString("Unable to remove upload temp file: %1").arg(tempPath));
+            }
+        }
         emit navigateToProofreading();
     });
 
@@ -51,8 +57,20 @@ void AppController::importFilePaths(const QStringList& filePaths) {
 
     QString taskId = taskService.currentTaskId();
     bool autoEnhance = SettingsService::instance().autoEnhance();
+    const int existingCount = taskService.currentTaskPageCount();
+    const int remaining = qMax(0, 10 - existingCount);
 
-    auto newPages = ImageService::instance().importImages(taskId, filePaths, autoEnhance);
+    if (remaining == 0) {
+        emit notifyUser("单个任务最多包含 10 张图片。", "warning");
+        return;
+    }
+
+    QStringList acceptedPaths = filePaths.mid(0, remaining);
+    if (acceptedPaths.size() < filePaths.size()) {
+        emit notifyUser(QString("任务最多 10 页，本次仅导入前 %1 张图片。").arg(acceptedPaths.size()), "warning");
+    }
+
+    auto newPages = ImageService::instance().importImages(taskId, acceptedPaths, autoEnhance, existingCount);
     for (const auto& page : newPages) {
         taskService.addPageToCurrentTask(page);
     }

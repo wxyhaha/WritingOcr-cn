@@ -1,6 +1,7 @@
 #include "StorageService.h"
 #include "../infrastructure/logging/Logger.h"
 #include <QFileInfo>
+#include <QRegularExpression>
 
 namespace HandwritingOCR {
 
@@ -70,7 +71,18 @@ bool StorageService::ensureTaskDirs(const QString& taskId) {
 }
 
 bool StorageService::deleteEntireTaskDir(const QString& taskId) {
-    QString taskPath = getTaskDir(taskId);
+    static const QRegularExpression safeId("^[A-Za-z0-9_-]+$");
+    if (!safeId.match(taskId).hasMatch()) {
+        Logger::instance().error("StorageService", QString("Refusing unsafe task id for deletion: %1").arg(taskId));
+        return false;
+    }
+
+    const QString tasksRoot = QDir::fromNativeSeparators(QDir(QDir(m_baseDir).filePath("tasks")).absolutePath());
+    const QString taskPath = QDir::fromNativeSeparators(QDir(getTaskDir(taskId)).absolutePath());
+    if (!taskPath.startsWith(tasksRoot + "/", Qt::CaseInsensitive)) {
+        Logger::instance().error("StorageService", QString("Refusing deletion outside task root: %1").arg(taskPath));
+        return false;
+    }
     QDir dir(taskPath);
     if (!dir.exists()) {
         return true;

@@ -8,6 +8,7 @@
 #include <QProcess>
 #include <QElapsedTimer>
 #include <QTimer>
+#include <QFutureSynchronizer>
 #include <memory>
 #include <atomic>
 
@@ -76,6 +77,7 @@ private:
     QProcess* m_workerProcess = nullptr;
     QElapsedTimer m_elapsedTimer;
     QTimer* m_tickerTimer = nullptr;
+    QFutureSynchronizer<void> m_jobs;
 
     bool m_isProcessing = false;
     bool m_isWorkerRunning = false;
@@ -85,6 +87,7 @@ private:
     double m_elapsedSeconds = 0.0;
     double m_lastDuration = 0.0;
     QString m_progressText;
+    QString m_workerAuthToken;
     std::atomic<bool> m_cancelRequested{false};
 };
 

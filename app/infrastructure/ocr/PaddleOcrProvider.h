@@ -3,6 +3,7 @@
 #include "IOcrProvider.h"
 #include <QString>
 #include <QObject>
+#include <QMutex>
 
 namespace HandwritingOCR {
 
@@ -11,8 +12,9 @@ public:
     explicit PaddleOcrProvider(const QString& workerBaseUrl = "http://127.0.0.1:8766");
     ~PaddleOcrProvider() override = default;
 
-    void setBaseUrl(const QString& url) { m_baseUrl = url; }
-    QString baseUrl() const { return m_baseUrl; }
+    void setBaseUrl(const QString& url);
+    QString baseUrl() const;
+    void setAuthToken(const QString& token);
 
     ProviderInfo info() const override;
     bool checkAvailability(QString* statusMessage = nullptr) override;
@@ -20,6 +22,8 @@ public:
 
 private:
     QString m_baseUrl;
+    QString m_authToken;
+    mutable QMutex m_configMutex;
 };
 
 } // namespace HandwritingOCR

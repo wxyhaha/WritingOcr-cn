@@ -34,7 +34,10 @@ int main(int argc, char *argv[]) {
     Logger::instance().info("Main", "=== Starting Handwriting OCR Digitalizer MVP ===");
 
     // 2. Initialize Database & Settings
-    DatabaseManager::instance().init(StorageService::instance().getDatabaseFilePath());
+    if (!DatabaseManager::instance().init(StorageService::instance().getDatabaseFilePath())) {
+        Logger::instance().error("Main", "Database initialization failed; refusing to start with unsafe persistence.");
+        return 2;
+    }
     SettingsService::instance().load();
 
     // 3. Initialize Services

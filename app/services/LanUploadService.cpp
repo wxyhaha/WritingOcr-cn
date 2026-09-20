@@ -146,6 +146,7 @@ void LanUploadService::refreshSessionToken() {
     }
 
     m_server->setSessionToken(m_sessionToken);
+    resetReceivedCount();
     regenerateQrCode();
     emit tokenChanged();
     emit urlChanged();
@@ -153,13 +154,14 @@ void LanUploadService::refreshSessionToken() {
 
 void LanUploadService::resetReceivedCount() {
     m_receivedCount = 0;
+    m_server->resetReceivedCount();
     emit progressChanged(0, 0);
 }
 
 void LanUploadService::regenerateQrCode() {
     QString url = uploadUrl();
     m_qrCodeDataUrl = QrCodeGenerator::generateQrCodeDataUrl(url);
-    Logger::instance().info("LanUploadService", QString("Generated QR Code for URL: %1").arg(url));
+    Logger::instance().info("LanUploadService", QString("Generated QR Code for %1:%2 (session token redacted)").arg(m_lanIp).arg(m_port));
     emit qrCodeChanged();
 }
 

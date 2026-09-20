@@ -38,8 +38,13 @@ bool DatabaseManager::init(const QString& dbPath) {
 
     // Enable foreign keys and WAL mode for better concurrency and safety
     QSqlQuery pragmaQuery(m_db);
-    pragmaQuery.exec("PRAGMA foreign_keys = ON;");
-    pragmaQuery.exec("PRAGMA journal_mode = WAL;");
+    if (!pragmaQuery.exec("PRAGMA foreign_keys = ON;")) {
+        Logger::instance().error("Database", QString("Unable to enable foreign keys: %1").arg(pragmaQuery.lastError().text()));
+        return false;
+    }
+    if (!pragmaQuery.exec("PRAGMA journal_mode = WAL;")) {
+        Logger::instance().warn("Database", QString("Unable to enable WAL mode: %1").arg(pragmaQuery.lastError().text()));
+    }
 
     if (!createTables()) {
         Logger::instance().error("Database", "Failed to create database tables.");
@@ -135,6 +140,7 @@ bool DatabaseManager::createTables() {
             line_index INTEGER DEFAULT 0,
             block_index INTEGER DEFAULT 0,
             type TEXT DEFAULT 'text',
+            handwriting_score REAL DEFAULT 1.0,
             status TEXT DEFAULT 'raw',
             char_start INTEGER DEFAULT -1,
             char_end INTEGER DEFAULT -1,
@@ -148,6 +154,12 @@ bool DatabaseManager::createTables() {
     // Migration: ensure char_start and char_end exist in existing databases
     q.exec("ALTER TABLE ocr_blocks ADD COLUMN char_start INTEGER DEFAULT -1");
     q.exec("ALTER TABLE ocr_blocks ADD COLUMN char_end INTEGER DEFAULT -1");
+    q.exec("ALTER TABLE ocr_blocks ADD COLUMN handwriting_score REAL DEFAULT 1.0");
+
+    // Query and relationship indexes. These are safe migrations for existing databases.
+    q.exec("CREATE INDEX IF NOT EXISTS idx_pages_task_order ON pages(task_id, page_index)");
+    q.exec("CREATE INDEX IF NOT EXISTS idx_ocr_results_page ON ocr_results(page_id)");
+    q.exec("CREATE INDEX IF NOT EXISTS idx_ocr_blocks_page_order ON ocr_blocks(page_id, line_index, block_index)");
 
     // settings table
     QString createSettings = R"(
@@ -241,21 +253,21 @@ bool DatabaseManager::updateTaskStats(const QString& taskId, int totalCharacters
 
 bool DatabaseManager::deleteTask(const QString& taskId) {
     QMutexLocker locker(&m_mutex);
-    m_db.transaction();
+    if (!m_db.transaction()) return false;
 
     // Cascade deletion of child records
     QSqlQuery q(m_db);
     q.prepare("DELETE FROM ocr_blocks WHERE page_id IN (SELECT id FROM pages WHERE task_id = :task_id)");
     q.bindValue(":task_id", taskId);
-    q.exec();
+    if (!q.exec()) { m_db.rollback(); return false; }
 
     q.prepare("DELETE FROM ocr_results WHERE page_id IN (SELECT id FROM pages WHERE task_id = :task_id)");
     q.bindValue(":task_id", taskId);
-    q.exec();
+    if (!q.exec()) { m_db.rollback(); return false; }
 
     q.prepare("DELETE FROM pages WHERE task_id = :task_id");
     q.bindValue(":task_id", taskId);
-    q.exec();
+    if (!q.exec()) { m_db.rollback(); return false; }
 
     q.prepare("DELETE FROM tasks WHERE id = :id");
     q.bindValue(":id", taskId);
@@ -265,7 +277,10 @@ bool DatabaseManager::deleteTask(const QString& taskId) {
         return false;
     }
 
-    m_db.commit();
+    if (!m_db.commit()) {
+        Logger::instance().error("Database", QString("Commit task deletion failed: %1").arg(m_db.lastError().text()));
+        return false;
+    }
     return true;
 }
 
@@ -387,16 +402,16 @@ bool DatabaseManager::updatePageStatus(const QString& pageId, PageStatus status)
 
 bool DatabaseManager::deletePage(const QString& pageId) {
     QMutexLocker locker(&m_mutex);
-    m_db.transaction();
+    if (!m_db.transaction()) return false;
     QSqlQuery q(m_db);
 
     q.prepare("DELETE FROM ocr_blocks WHERE page_id = :page_id");
     q.bindValue(":page_id", pageId);
-    q.exec();
+    if (!q.exec()) { m_db.rollback(); return false; }
 
     q.prepare("DELETE FROM ocr_results WHERE page_id = :page_id");
     q.bindValue(":page_id", pageId);
-    q.exec();
+    if (!q.exec()) { m_db.rollback(); return false; }
 
     q.prepare("DELETE FROM pages WHERE id = :id");
     q.bindValue(":id", pageId);
@@ -404,22 +419,21 @@ bool DatabaseManager::deletePage(const QString& pageId) {
         m_db.rollback();
         return false;
     }
-    m_db.commit();
-    return true;
+    return m_db.commit();
 }
 
 bool DatabaseManager::deletePagesByTaskId(const QString& taskId) {
     QMutexLocker locker(&m_mutex);
-    m_db.transaction();
+    if (!m_db.transaction()) return false;
     QSqlQuery q(m_db);
 
     q.prepare("DELETE FROM ocr_blocks WHERE page_id IN (SELECT id FROM pages WHERE task_id = :task_id)");
     q.bindValue(":task_id", taskId);
-    q.exec();
+    if (!q.exec()) { m_db.rollback(); return false; }
 
     q.prepare("DELETE FROM ocr_results WHERE page_id IN (SELECT id FROM pages WHERE task_id = :task_id)");
     q.bindValue(":task_id", taskId);
-    q.exec();
+    if (!q.exec()) { m_db.rollback(); return false; }
 
     q.prepare("DELETE FROM pages WHERE task_id = :task_id");
     q.bindValue(":task_id", taskId);
@@ -427,8 +441,7 @@ bool DatabaseManager::deletePagesByTaskId(const QString& taskId) {
         m_db.rollback();
         return false;
     }
-    m_db.commit();
-    return true;
+    return m_db.commit();
 }
 
 QVector<Page> DatabaseManager::getPagesByTaskId(const QString& taskId) {
@@ -490,16 +503,16 @@ std::unique_ptr<Page> DatabaseManager::getPage(const QString& pageId) {
 
 bool DatabaseManager::saveOcrResult(const OcrResult& ocrResult) {
     QMutexLocker locker(&m_mutex);
-    m_db.transaction();
+    if (!m_db.transaction()) return false;
 
     QSqlQuery qDel(m_db);
     qDel.prepare("DELETE FROM ocr_blocks WHERE page_id = :page_id");
     qDel.bindValue(":page_id", ocrResult.pageId);
-    qDel.exec();
+    if (!qDel.exec()) { m_db.rollback(); return false; }
 
     qDel.prepare("DELETE FROM ocr_results WHERE page_id = :page_id");
     qDel.bindValue(":page_id", ocrResult.pageId);
-    qDel.exec();
+    if (!qDel.exec()) { m_db.rollback(); return false; }
 
     QSqlQuery qRes(m_db);
     qRes.prepare("INSERT INTO ocr_results (id, page_id, engine, engine_version, created_at, image_width, image_height, raw_text) "
@@ -520,8 +533,8 @@ bool DatabaseManager::saveOcrResult(const OcrResult& ocrResult) {
     }
 
     QSqlQuery qBlock(m_db);
-    qBlock.prepare("INSERT INTO ocr_blocks (id, page_id, text, confidence, bbox_x, bbox_y, bbox_w, bbox_h, line_index, block_index, type, status, char_start, char_end) "
-                   "VALUES (:id, :page_id, :text, :confidence, :bbox_x, :bbox_y, :bbox_w, :bbox_h, :line_index, :block_index, :type, :status, :char_start, :char_end)");
+    qBlock.prepare("INSERT INTO ocr_blocks (id, page_id, text, confidence, bbox_x, bbox_y, bbox_w, bbox_h, line_index, block_index, type, handwriting_score, status, char_start, char_end) "
+                   "VALUES (:id, :page_id, :text, :confidence, :bbox_x, :bbox_y, :bbox_w, :bbox_h, :line_index, :block_index, :type, :handwriting_score, :status, :char_start, :char_end)");
 
     for (const auto& block : ocrResult.blocks) {
         qBlock.bindValue(":id", block.id);
@@ -535,6 +548,7 @@ bool DatabaseManager::saveOcrResult(const OcrResult& ocrResult) {
         qBlock.bindValue(":line_index", block.lineIndex);
         qBlock.bindValue(":block_index", block.blockIndex);
         qBlock.bindValue(":type", block.type);
+        qBlock.bindValue(":handwriting_score", block.handwritingScore);
         qBlock.bindValue(":status", block.status);
         qBlock.bindValue(":char_start", block.charStart);
         qBlock.bindValue(":char_end", block.charEnd);
@@ -545,8 +559,7 @@ bool DatabaseManager::saveOcrResult(const OcrResult& ocrResult) {
         }
     }
 
-    m_db.commit();
-    return true;
+    return m_db.commit();
 }
 
 std::unique_ptr<OcrResult> DatabaseManager::getOcrResultByPageId(const QString& pageId) {
@@ -567,7 +580,7 @@ std::unique_ptr<OcrResult> DatabaseManager::getOcrResultByPageId(const QString& 
         result->rawText = q.value("raw_text").toString();
 
         QSqlQuery qBlocks(m_db);
-        qBlocks.prepare("SELECT id, text, confidence, bbox_x, bbox_y, bbox_w, bbox_h, line_index, block_index, type, status, char_start, char_end FROM ocr_blocks WHERE page_id = :page_id ORDER BY line_index ASC, block_index ASC");
+        qBlocks.prepare("SELECT id, text, confidence, bbox_x, bbox_y, bbox_w, bbox_h, line_index, block_index, type, handwriting_score, status, char_start, char_end FROM ocr_blocks WHERE page_id = :page_id ORDER BY line_index ASC, block_index ASC");
         qBlocks.bindValue(":page_id", pageId);
         if (qBlocks.exec()) {
             while (qBlocks.next()) {
@@ -583,6 +596,7 @@ std::unique_ptr<OcrResult> DatabaseManager::getOcrResultByPageId(const QString& 
                 block.lineIndex = qBlocks.value("line_index").toInt();
                 block.blockIndex = qBlocks.value("block_index").toInt();
                 block.type = qBlocks.value("type").toString();
+                block.handwritingScore = qBlocks.value("handwriting_score").toDouble();
                 block.status = qBlocks.value("status").toString();
                 block.charStart = qBlocks.value("char_start").isNull() ? -1 : qBlocks.value("char_start").toInt();
                 block.charEnd = qBlocks.value("char_end").isNull() ? -1 : qBlocks.value("char_end").toInt();
@@ -596,18 +610,17 @@ std::unique_ptr<OcrResult> DatabaseManager::getOcrResultByPageId(const QString& 
 
 bool DatabaseManager::deleteOcrResultByPageId(const QString& pageId) {
     QMutexLocker locker(&m_mutex);
-    m_db.transaction();
+    if (!m_db.transaction()) return false;
     QSqlQuery q(m_db);
     q.prepare("DELETE FROM ocr_blocks WHERE page_id = :page_id");
     q.bindValue(":page_id", pageId);
-    q.exec();
+    if (!q.exec()) { m_db.rollback(); return false; }
 
     q.prepare("DELETE FROM ocr_results WHERE page_id = :page_id");
     q.bindValue(":page_id", pageId);
-    q.exec();
+    if (!q.exec()) { m_db.rollback(); return false; }
 
-    m_db.commit();
-    return true;
+    return m_db.commit();
 }
 
 // ----------------- Settings -----------------

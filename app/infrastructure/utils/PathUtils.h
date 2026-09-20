@@ -56,7 +56,18 @@ public:
             return QDir::toNativeSeparators(envPy);
         }
 
-        // 2. Search user %LOCALAPPDATA%/Programs/Python/Python* (Standard Python.org Windows install)
+        // 2. Prefer a project-local virtual environment so pinned dependencies
+        // are used instead of an unrelated global Python installation.
+        QDir projectDir(QCoreApplication::applicationDirPath());
+        for (int i = 0; i < 5; ++i) {
+            const QString venvPython = projectDir.filePath(".venv/Scripts/python.exe");
+            if (isValidPythonExe(venvPython)) {
+                return QDir::toNativeSeparators(venvPython);
+            }
+            if (!projectDir.cdUp()) break;
+        }
+
+        // 3. Search user %LOCALAPPDATA%/Programs/Python/Python* (Standard Python.org Windows install)
         QString localAppData = QProcessEnvironment::systemEnvironment().value("LOCALAPPDATA");
         if (!localAppData.isEmpty()) {
             QDir pyProgramsDir(localAppData + "/Programs/Python");
@@ -71,7 +82,7 @@ public:
             }
         }
 
-        // 3. Search root C:/Python* or D:/Python*
+        // 4. Search root C:/Python* or D:/Python*
         for (const QString& driveRoot : QStringList() << "C:/" << "D:/") {
             QDir rootDir(driveRoot);
             if (rootDir.exists()) {
@@ -85,26 +96,26 @@ public:
             }
         }
 
-        // 4. Windows Python launcher 'py'
+        // 5. Windows Python launcher 'py'
         QString pyLauncher = QStandardPaths::findExecutable("py");
         if (isValidPythonExe(pyLauncher)) {
             if (prefixArgs) prefixArgs->append("-3");
             return QDir::toNativeSeparators(pyLauncher);
         }
 
-        // 5. Real 'python' in system PATH (excluding WindowsApps dummy)
+        // 6. Real 'python' in system PATH (excluding WindowsApps dummy)
         QString pathPy = QStandardPaths::findExecutable("python");
         if (isValidPythonExe(pathPy)) {
             return QDir::toNativeSeparators(pathPy);
         }
 
-        // 6. Real 'python3' in system PATH (excluding WindowsApps dummy)
+        // 7. Real 'python3' in system PATH (excluding WindowsApps dummy)
         QString pathPy3 = QStandardPaths::findExecutable("python3");
         if (isValidPythonExe(pathPy3)) {
             return QDir::toNativeSeparators(pathPy3);
         }
 
-        // 7. Fallback to 'py' launcher or 'python'
+        // 8. Fallback to 'py' launcher or 'python'
         if (!pyLauncher.isEmpty()) {
             if (prefixArgs) prefixArgs->append("-3");
             return "py";

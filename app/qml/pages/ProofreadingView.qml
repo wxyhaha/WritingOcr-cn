@@ -230,7 +230,7 @@ Item {
                         text: app.taskService.currentEditedText
                         blockModel: app.ocrBlockListModel
                         onTextEdited: (newText) => {
-                            app.taskService.updateCurrentPageText(newText);
+                            app.taskService.updateEditedText(newText);
                         }
                         onBlockSelected: (blockIndex) => {
                             imageViewer.focusBlock(blockIndex);

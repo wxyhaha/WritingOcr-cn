@@ -1,9 +1,10 @@
 import os
 import sys
 import logging
+import hmac
+from pathlib import Path
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException, Body
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 import uvicorn
 
@@ -30,15 +31,28 @@ app = FastAPI(
     description="Local OCR Worker API for Handwriting Chinese Article Digitalization"
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 engine = OCREngine()
+ocr_token = os.environ.get("OCR_TOKEN", "")
+configured_roots = [p for p in os.environ.get("OCR_ALLOWED_ROOTS", "").split(os.pathsep) if p]
+allowed_roots = [Path(p).expanduser().resolve() for p in configured_roots]
+if not allowed_roots:
+    allowed_roots = [(Path.home() / "Documents" / "HandwritingOCR" / "tasks").resolve()]
+
+def authorize(x_ocr_token: Optional[str]) -> None:
+    if ocr_token and not hmac.compare_digest(x_ocr_token or "", ocr_token):
+        raise HTTPException(status_code=401, detail="Invalid OCR worker token")
+
+def validate_image_path(image_path: str) -> str:
+    try:
+        resolved = Path(image_path).expanduser().resolve(strict=True)
+    except (OSError, RuntimeError):
+        raise HTTPException(status_code=404, detail="Image file not found")
+    if not resolved.is_file():
+        raise HTTPException(status_code=404, detail="Image file not found")
+    if not any(resolved.is_relative_to(root) for root in allowed_roots):
+        logger.warning("Rejected OCR path outside configured roots: %s", resolved)
+        raise HTTPException(status_code=403, detail="Image path is outside the permitted task storage")
+    return str(resolved)
 
 class OcrRequest(BaseModel):
     image_path: str
@@ -51,11 +65,13 @@ class OcrBatchRequest(BaseModel):
     filter_printed_text: Optional[bool] = True
 
 @app.get("/health")
-def health():
+def health(x_ocr_token: Optional[str] = Header(default=None)):
+    authorize(x_ocr_token)
     return engine.check_health()
 
 @app.get("/capabilities")
-def capabilities():
+def capabilities(x_ocr_token: Optional[str] = Header(default=None)):
+    authorize(x_ocr_token)
     return {
         "engine": "PaddleOCR",
         "version": "PP-OCRv5",
@@ -65,13 +81,11 @@ def capabilities():
     }
 
 @app.post("/ocr")
-def ocr(req: OcrRequest):
+def ocr(req: OcrRequest, x_ocr_token: Optional[str] = Header(default=None)):
     try:
-        norm_path = os.path.normpath(req.image_path)
+        authorize(x_ocr_token)
+        norm_path = validate_image_path(req.image_path)
         logger.info(f"Received OCR request for image: {norm_path}, filter_printed_text={req.filter_printed_text}")
-        if not os.path.exists(norm_path):
-            logger.error(f"Image not found at path: {norm_path}")
-            raise HTTPException(status_code=404, detail=f"Image file not found: {norm_path}")
         result = engine.recognize(norm_path, filter_printed_text=bool(req.filter_printed_text))
         logger.info(f"OCR completed for {norm_path}, recognized {len(result.get('blocks', []))} blocks.")
         return result
@@ -82,12 +96,18 @@ def ocr(req: OcrRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ocr/batch")
-def ocr_batch(req: OcrBatchRequest):
+def ocr_batch(req: OcrBatchRequest, x_ocr_token: Optional[str] = Header(default=None)):
+    authorize(x_ocr_token)
+    if len(req.image_paths) > 10:
+        raise HTTPException(status_code=422, detail="A batch may contain at most 10 images")
     results = []
     for path in req.image_paths:
         try:
-            res = engine.recognize(path, filter_printed_text=bool(req.filter_printed_text))
-            results.append({"image_path": path, "success": True, "result": res})
+            validated_path = validate_image_path(path)
+            res = engine.recognize(validated_path, filter_printed_text=bool(req.filter_printed_text))
+            results.append({"image_path": validated_path, "success": True, "result": res})
+        except HTTPException as e:
+            results.append({"image_path": path, "success": False, "error": e.detail})
         except Exception as e:
             results.append({"image_path": path, "success": False, "error": str(e)})
     return {"results": results}

@@ -116,6 +116,24 @@ add_executable(test_exporters
 target_link_libraries(test_exporters PRIVATE Qt6::Core)
 add_test(NAME test_exporters COMMAND test_exporters)
 
+add_executable(test_image_service
+    tests/test_image_service.cpp
+    app/services/ImageService.cpp
+    app/services/StorageService.cpp
+    app/infrastructure/logging/Logger.cpp
+)
+target_link_libraries(test_image_service PRIVATE Qt6::Core Qt6::Gui)
+add_test(NAME test_image_service COMMAND test_image_service)
+
+if(WIN32 AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.venv/Scripts/python.exe")
+    set(Python3_EXECUTABLE "${CMAKE_CURRENT_SOURCE_DIR}/.venv/Scripts/python.exe")
+endif()
+find_package(Python3 3.10 COMPONENTS Interpreter)
+if(Python3_Interpreter_FOUND)
+    add_test(NAME test_ocr_api
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ocr_api.py")
+endif()
+
 
 # Copy web-upload, ocr-worker and scripts directories to output build directory
 add_custom_command(TARGET HandwritingOCR POST_BUILD

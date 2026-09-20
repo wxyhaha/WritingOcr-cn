@@ -17,6 +17,21 @@ namespace HandwritingOCR {
 PaddleOcrProvider::PaddleOcrProvider(const QString& workerBaseUrl)
     : m_baseUrl(workerBaseUrl) {}
 
+void PaddleOcrProvider::setBaseUrl(const QString& url) {
+    QMutexLocker locker(&m_configMutex);
+    m_baseUrl = url;
+}
+
+QString PaddleOcrProvider::baseUrl() const {
+    QMutexLocker locker(&m_configMutex);
+    return m_baseUrl;
+}
+
+void PaddleOcrProvider::setAuthToken(const QString& token) {
+    QMutexLocker locker(&m_configMutex);
+    m_authToken = token;
+}
+
 ProviderInfo PaddleOcrProvider::info() const {
     ProviderInfo inf;
     inf.name = "PaddleOCR";
@@ -26,10 +41,18 @@ ProviderInfo PaddleOcrProvider::info() const {
 }
 
 bool PaddleOcrProvider::checkAvailability(QString* statusMessage) {
+    QString baseUrl;
+    QString authToken;
+    {
+        QMutexLocker locker(&m_configMutex);
+        baseUrl = m_baseUrl;
+        authToken = m_authToken;
+    }
     QNetworkAccessManager manager;
-    QUrl url(m_baseUrl + "/health");
+    QUrl url(baseUrl + "/health");
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    if (!authToken.isEmpty()) request.setRawHeader("X-OCR-Token", authToken.toUtf8());
 
     QNetworkReply* reply = manager.get(request);
     QEventLoop loop;
@@ -52,16 +75,19 @@ bool PaddleOcrProvider::checkAvailability(QString* statusMessage) {
                 if (status == "ready") {
                     if (statusMessage) *statusMessage = "OCR Worker 就绪 (PP-OCRv5)";
                     return true;
-                } else {
+                } else if (status == "loading") {
                     if (statusMessage) *statusMessage = "OCR Worker 正在初始化模型...";
-                    return true; // Server is running, model loading
+                    return false;
+                } else {
+                    if (statusMessage) *statusMessage = doc.object().value("error_detail").toString("OCR Worker 初始化失败");
+                    return false;
                 }
             }
         }
     }
 
     if (statusMessage) {
-        *statusMessage = QString("无法连接到 OCR Worker (%1): %2").arg(m_baseUrl, reply->errorString());
+        *statusMessage = QString("无法连接到 OCR Worker (%1): %2").arg(baseUrl, reply->errorString());
     }
     reply->abort();
     reply->deleteLater();
@@ -69,10 +95,18 @@ bool PaddleOcrProvider::checkAvailability(QString* statusMessage) {
 }
 
 std::optional<OcrResult> PaddleOcrProvider::recognize(const OcrRequest& request, QString* errorMsg) {
+    QString baseUrl;
+    QString authToken;
+    {
+        QMutexLocker locker(&m_configMutex);
+        baseUrl = m_baseUrl;
+        authToken = m_authToken;
+    }
     QNetworkAccessManager manager;
-    QUrl url(m_baseUrl + "/ocr");
+    QUrl url(baseUrl + "/ocr");
     QNetworkRequest netReq(url);
     netReq.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    if (!authToken.isEmpty()) netReq.setRawHeader("X-OCR-Token", authToken.toUtf8());
 
     QJsonObject reqObj;
     reqObj["image_path"] = request.imagePath;

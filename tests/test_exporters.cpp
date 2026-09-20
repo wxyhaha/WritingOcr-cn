@@ -6,12 +6,18 @@
 #include "../app/models/OcrResult.h"
 
 #include <iostream>
-#include <cassert>
 #include <QDir>
 #include <QFile>
 #include <QCoreApplication>
 
 using namespace HandwritingOCR;
+
+#define CHECK(condition) do { \
+    if (!(condition)) { \
+        std::cerr << "[FAIL] " #condition " at line " << __LINE__ << std::endl; \
+        return 1; \
+    } \
+} while (false)
 
 int main(int argc, char* argv[]) {
     QCoreApplication app(argc, argv);
@@ -41,24 +47,24 @@ int main(int argc, char* argv[]) {
     QString txtPath = exportTestDir + "/result.txt";
     QString err;
     bool txtOk = txtExp.exportDocument(task, txtPath, &err);
-    assert(txtOk);
-    assert(QFile::exists(txtPath));
+    CHECK(txtOk);
+    CHECK(QFile::exists(txtPath));
     std::cout << "[PASS] TXT Export" << std::endl;
 
     // 2. Test Markdown Exporter
     MarkdownExporter mdExp;
     QString mdPath = exportTestDir + "/result.md";
     bool mdOk = mdExp.exportDocument(task, mdPath, &err);
-    assert(mdOk);
-    assert(QFile::exists(mdPath));
+    CHECK(mdOk);
+    CHECK(QFile::exists(mdPath));
     std::cout << "[PASS] Markdown Export" << std::endl;
 
     // 3. Test DOCX Exporter
     DocxExporter docxExp;
     QString docxPath = exportTestDir + "/result.docx";
     bool docxOk = docxExp.exportDocument(task, docxPath, &err);
-    assert(docxOk);
-    assert(QFile::exists(docxPath));
+    CHECK(docxOk);
+    CHECK(QFile::exists(docxPath));
     std::cout << "[PASS] DOCX Export" << std::endl;
 
     std::cout << "All Exporter tests passed successfully!" << std::endl;

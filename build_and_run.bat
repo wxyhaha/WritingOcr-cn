@@ -98,12 +98,8 @@ if %errorlevel% neq 0 (
 
 echo.
 echo [2/3] Checking OCR Worker...
-netstat -ano | findstr /R /C:":8766 " >nul
-if %errorlevel% neq 0 (
-    echo Starting OCR Worker via !PYTHON_EXE!...
-    start "OCR-Worker" /min cmd /c "!PYTHON_EXE! \"%~dp0ocr-worker\main.py\""
-    ping 127.0.0.1 -n 3 >nul
-)
+echo OCR Worker will be started securely by the desktop application.
+set "PYTHON_EXECUTABLE=!PYTHON_EXE!"
 
 echo.
 echo [3/3] Launching Desktop App...

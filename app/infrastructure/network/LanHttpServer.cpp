@@ -10,8 +10,19 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QBuffer>
+#include <QImageReader>
 
 namespace HandwritingOCR {
+
+namespace {
+constexpr qint64 MaxHeaderBytes = 64 * 1024;
+constexpr qint64 MaxRequestBytes = 100 * 1024 * 1024;
+constexpr qint64 MaxImageBytes = 15 * 1024 * 1024;
+constexpr int MaxUploadCount = 10;
+constexpr int MaxImageDimension = 20000;
+constexpr qint64 MaxImagePixels = 100'000'000;
+}
 
 LanHttpServer::LanHttpServer(QObject* parent) : QTcpServer(parent) {}
 
@@ -55,13 +66,22 @@ void LanHttpServer::onClientReadyRead() {
     if (!socket || !m_clientRequests.contains(socket)) return;
 
     HttpRequest& req = m_clientRequests[socket];
+    if (req.isComplete) return;
     req.rawBuffer.append(socket->readAll());
 
     // If headers not yet parsed, find header delimiter "\r\n\r\n"
     if (req.method.isEmpty()) {
         int headerEnd = req.rawBuffer.indexOf("\r\n\r\n");
         if (headerEnd == -1) {
+            if (req.rawBuffer.size() > MaxHeaderBytes) {
+                sendResponse(socket, 431, "Request Header Fields Too Large", "text/plain", "Request headers too large");
+            }
             return; // Wait for full headers
+        }
+
+        if (headerEnd > MaxHeaderBytes) {
+            sendResponse(socket, 431, "Request Header Fields Too Large", "text/plain", "Request headers too large");
+            return;
         }
 
         QByteArray headerBytes = req.rawBuffer.left(headerEnd);
@@ -100,8 +120,21 @@ void LanHttpServer::onClientReadyRead() {
         }
 
         if (req.headers.contains("content-length")) {
-            req.expectedContentLength = req.headers["content-length"].toLongLong();
+            bool ok = false;
+            req.expectedContentLength = req.headers["content-length"].toLongLong(&ok);
+            if (!ok || req.expectedContentLength < 0 || req.expectedContentLength > MaxRequestBytes) {
+                sendResponse(socket, 413, "Payload Too Large", "text/plain", "Upload payload is too large");
+                return;
+            }
+        } else if (req.method == "POST") {
+            sendResponse(socket, 411, "Length Required", "text/plain", "Content-Length is required");
+            return;
         }
+    }
+
+    if (req.rawBuffer.size() > MaxRequestBytes) {
+        sendResponse(socket, 413, "Payload Too Large", "text/plain", "Upload payload is too large");
+        return;
     }
 
     // Check body completeness
@@ -127,9 +160,9 @@ void LanHttpServer::sendResponse(QTcpSocket* socket, int statusCode, const QStri
     QByteArray response;
     response.append(QString("HTTP/1.1 %1 %2\r\n").arg(statusCode).arg(statusText).toUtf8());
     response.append("Server: HandwritingOCR-LAN\r\n");
-    response.append("Access-Control-Allow-Origin: *\r\n");
-    response.append("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n");
-    response.append("Access-Control-Allow-Headers: Content-Type, Authorization\r\n");
+    response.append("X-Content-Type-Options: nosniff\r\n");
+    response.append("Referrer-Policy: no-referrer\r\n");
+    response.append("Content-Security-Policy: default-src 'self'; img-src 'self' blob:; style-src 'self'; script-src 'self'\r\n");
     response.append(QString("Content-Type: %1\r\n").arg(contentType).toUtf8());
     response.append(QString("Content-Length: %1\r\n").arg(body.size()).toUtf8());
     response.append("Connection: close\r\n\r\n");
@@ -184,7 +217,7 @@ void LanHttpServer::handleStatusApi(QTcpSocket* socket, const HttpRequest& req) 
     QJsonObject res;
     res["validToken"] = validToken;
     res["receivedCount"] = m_receivedCount;
-    res["maxAllowed"] = 10;
+    res["maxAllowed"] = MaxUploadCount;
 
     QJsonDocument doc(res);
     sendResponse(socket, 200, "OK", "application/json", doc.toJson(QJsonDocument::Compact));
@@ -205,9 +238,17 @@ void LanHttpServer::handleUploadApi(QTcpSocket* socket, const HttpRequest& req) 
         return;
     }
 
+    if (m_receivedCount >= MaxUploadCount) {
+        QJsonObject err;
+        err["success"] = false;
+        err["error"] = "The current upload session already contains 10 images";
+        sendResponse(socket, 409, "Conflict", "application/json", QJsonDocument(err).toJson());
+        return;
+    }
+
     // 2. Parse Content-Type multipart boundary
     QString contentType = req.headers.value("content-type");
-    if (!contentType.startsWith("multipart/form-data")) {
+    if (!contentType.startsWith("multipart/form-data", Qt::CaseInsensitive)) {
         QJsonObject err;
         err["success"] = false;
         err["error"] = "Content-Type must be multipart/form-data";
@@ -215,7 +256,7 @@ void LanHttpServer::handleUploadApi(QTcpSocket* socket, const HttpRequest& req) 
         return;
     }
 
-    int boundaryIdx = contentType.indexOf("boundary=");
+    int boundaryIdx = contentType.indexOf("boundary=", 0, Qt::CaseInsensitive);
     if (boundaryIdx == -1) {
         QJsonObject err;
         err["success"] = false;
@@ -224,11 +265,20 @@ void LanHttpServer::handleUploadApi(QTcpSocket* socket, const HttpRequest& req) 
         return;
     }
 
-    QByteArray boundary = "--" + contentType.mid(boundaryIdx + 9).trimmed().toUtf8();
+    QString boundaryValue = contentType.mid(boundaryIdx + 9).section(';', 0, 0).trimmed();
+    if (boundaryValue.startsWith('"') && boundaryValue.endsWith('"')) {
+        boundaryValue = boundaryValue.mid(1, boundaryValue.size() - 2);
+    }
+    if (boundaryValue.isEmpty() || boundaryValue.size() > 200) {
+        sendResponse(socket, 400, "Bad Request", "application/json", "{\"success\":false,\"error\":\"Invalid multipart boundary\"}");
+        return;
+    }
+    QByteArray boundary = "--" + boundaryValue.toUtf8();
     QString tempBaseDir = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation)).filePath("HandwritingOCR_Uploads");
     QDir().mkpath(tempBaseDir);
 
     QStringList savedFilePaths;
+    bool limitExceeded = false;
     const QByteArray& body = req.body;
     int pos = 0;
 
@@ -263,6 +313,15 @@ void LanHttpServer::handleUploadApi(QTcpSocket* socket, const HttpRequest& req) 
 
         // Extract filename from Content-Disposition
         if (partHeaderStr.contains("filename=")) {
+            if (m_receivedCount + savedFilePaths.size() >= MaxUploadCount) {
+                limitExceeded = true;
+                break;
+            }
+
+            if (fileContent.isEmpty() || fileContent.size() > MaxImageBytes) {
+                continue;
+            }
+
             int fnStart = partHeaderStr.indexOf("filename=\"");
             QString filename;
             if (fnStart != -1) {
@@ -279,11 +338,21 @@ void LanHttpServer::handleUploadApi(QTcpSocket* socket, const HttpRequest& req) 
             }
 
             // Security: Sanitize filename to prevent path traversal
-            QFileInfo origFi(filename);
-            QString safeExt = origFi.suffix().toLower();
-            if (safeExt != "jpg" && safeExt != "jpeg" && safeExt != "png" && safeExt != "webp" && safeExt != "bmp") {
-                safeExt = "jpg";
+            QBuffer imageBuffer(&fileContent);
+            imageBuffer.open(QIODevice::ReadOnly);
+            QImageReader reader(&imageBuffer);
+            reader.setDecideFormatFromContent(true);
+            const QByteArray detectedFormat = reader.format().toLower();
+            const QSize imageSize = reader.size();
+            if (!reader.canRead()
+                || !QList<QByteArray>{"jpg", "jpeg", "png", "webp", "bmp"}.contains(detectedFormat)
+                || !imageSize.isValid()
+                || imageSize.width() > MaxImageDimension
+                || imageSize.height() > MaxImageDimension
+                || static_cast<qint64>(imageSize.width()) * imageSize.height() > MaxImagePixels) {
+                continue;
             }
+            const QString safeExt = detectedFormat == "jpeg" ? "jpg" : QString::fromLatin1(detectedFormat);
 
             QString uniqueName = QString("upload_%1_%2.%3")
                                      .arg(QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss"))
@@ -299,10 +368,19 @@ void LanHttpServer::handleUploadApi(QTcpSocket* socket, const HttpRequest& req) 
         }
     }
 
+    if (limitExceeded) {
+        for (const auto& path : savedFilePaths) QFile::remove(path);
+        QJsonObject resp;
+        resp["success"] = false;
+        resp["error"] = "Uploading these files would exceed the 10-image session limit";
+        sendResponse(socket, 413, "Payload Too Large", "application/json", QJsonDocument(resp).toJson());
+        return;
+    }
+
     if (!savedFilePaths.isEmpty()) {
         m_receivedCount += savedFilePaths.size();
         emit filesReceived(savedFilePaths);
-        emit uploadProgressChanged(m_receivedCount, 10);
+        emit uploadProgressChanged(m_receivedCount, MaxUploadCount);
 
         QJsonObject resp;
         resp["success"] = true;

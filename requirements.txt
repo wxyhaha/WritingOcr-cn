@@ -1,8 +1,8 @@
 # ==============================================================================
 # Handwriting Chinese OCR Digitalizer - Locked Exact Dependencies
 # ==============================================================================
-# To guarantee 100% identical high-precision PP-OCRv6 handwriting recognition across
-# different computers, all core packages are strictly pinned to exact tested versions.
+# Exact direct dependencies for the tested PP-OCRv5 runtime. Transitive packages
+# should be captured by the release lock file before producing installers.
 
 paddlepaddle==3.3.1
 paddleocr==3.7.0

@@ -86,13 +86,7 @@ if !errorlevel! neq 0 (
 
 :found_python
 echo [Env] Using Python: !PYTHON_EXE!
-
-netstat -ano | findstr /R /C:":8766 " >nul
-if %errorlevel% neq 0 (
-    echo Starting OCR Worker...
-    start "OCR-Worker" /min cmd /c "!PYTHON_EXE! \"%~dp0ocr-worker\main.py\""
-    ping 127.0.0.1 -n 3 >nul
-)
+set "PYTHON_EXECUTABLE=!PYTHON_EXE!"
 
 echo Launching Desktop Application...
 start "" "%~dp0build\HandwritingOCR.exe"

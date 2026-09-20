@@ -17,7 +17,8 @@ public:
 
     // Import local image files into a task
     // Returns list of successfully created pages
-    QVector<Page> importImages(const QString& taskId, const QStringList& filePaths, bool autoEnhance = false);
+    QVector<Page> importImages(const QString& taskId, const QStringList& filePaths,
+                               bool autoEnhance = false, int startPageIndex = 0);
 
     // Preprocessing single image
     bool preprocessImage(const QString& sourcePath, const QString& outputPath, bool autoEnhance = false);

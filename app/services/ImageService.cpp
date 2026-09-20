@@ -4,6 +4,7 @@
 #include <QImageReader>
 #include <QImageWriter>
 #include <QFileInfo>
+#include <QFile>
 #include <QDir>
 #include <QUuid>
 #include <QDateTime>
@@ -42,11 +43,14 @@ QImage ImageService::applyModerateEnhancement(const QImage& input) {
     QImage gray = input.convertToFormat(QImage::Format_Grayscale8);
 
     // Calculate histogram for min/max stretch (clip 1% extremes to avoid noise saturation)
-    const uchar* bits = gray.constBits();
     int totalPixels = gray.width() * gray.height();
+    if (totalPixels <= 0) return QImage();
     int hist[256] = {0};
-    for (int i = 0; i < totalPixels; ++i) {
-        hist[bits[i]]++;
+    for (int y = 0; y < gray.height(); ++y) {
+        const uchar* row = gray.constScanLine(y);
+        for (int x = 0; x < gray.width(); ++x) {
+            hist[row[x]]++;
+        }
     }
 
     int lowCut = totalPixels * 0.02;  // 2% black point
@@ -86,9 +90,13 @@ QImage ImageService::applyModerateEnhancement(const QImage& input) {
     }
 
     QImage enhanced(gray.size(), QImage::Format_Grayscale8);
-    uchar* outBits = enhanced.bits();
-    for (int i = 0; i < totalPixels; ++i) {
-        outBits[i] = lut[bits[i]];
+    if (enhanced.isNull()) return QImage();
+    for (int y = 0; y < gray.height(); ++y) {
+        const uchar* inputRow = gray.constScanLine(y);
+        uchar* outputRow = enhanced.scanLine(y);
+        for (int x = 0; x < gray.width(); ++x) {
+            outputRow[x] = lut[inputRow[x]];
+        }
     }
 
     return enhanced;
@@ -119,7 +127,8 @@ bool ImageService::preprocessImage(const QString& sourcePath, const QString& out
     return finalImage.save(outputPath, "PNG");
 }
 
-QVector<Page> ImageService::importImages(const QString& taskId, const QStringList& filePaths, bool autoEnhance) {
+QVector<Page> ImageService::importImages(const QString& taskId, const QStringList& filePaths,
+                                         bool autoEnhance, int startPageIndex) {
     QVector<Page> createdPages;
     if (taskId.isEmpty() || filePaths.isEmpty()) {
         return createdPages;
@@ -144,9 +153,11 @@ QVector<Page> ImageService::importImages(const QString& taskId, const QStringLis
         QString fileExt = QFileInfo(filePath).suffix().toLower();
         if (fileExt.isEmpty()) fileExt = "jpg";
 
-        QString targetSourceName = QString("%1_%2.%3").arg(QString::number(i + 1), 3, '0').arg(pageId.left(8), fileExt);
-        QString targetProcessedName = QString("%1_%2.png").arg(QString::number(i + 1), 3, '0').arg(pageId.left(8));
-        QString targetThumbName = QString("%1_%2_thumb.jpg").arg(QString::number(i + 1), 3, '0').arg(pageId.left(8));
+        const int pageIndex = startPageIndex + static_cast<int>(createdPages.size());
+        const QString pageNumber = QString::number(pageIndex + 1).rightJustified(3, '0');
+        QString targetSourceName = QString("%1_%2.%3").arg(pageNumber, pageId.left(8), fileExt);
+        QString targetProcessedName = QString("%1_%2.png").arg(pageNumber, pageId.left(8));
+        QString targetThumbName = QString("%1_%2_thumb.jpg").arg(pageNumber, pageId.left(8));
 
         QString targetSourcePath = QDir(sourceDir).filePath(targetSourceName);
         QString targetProcessedPath = QDir(processedDir).filePath(targetProcessedName);
@@ -160,12 +171,19 @@ QVector<Page> ImageService::importImages(const QString& taskId, const QStringLis
         }
 
         // Save normalized source image
-        img.save(targetSourcePath);
+        if (!img.save(targetSourcePath)) {
+            emit importError(QString("无法保存原始图片: %1").arg(filePath));
+            continue;
+        }
 
         // 2. Preprocess image
         if (autoEnhance) {
             QImage enhanced = applyModerateEnhancement(img);
-            enhanced.save(targetProcessedPath, "PNG");
+            if (enhanced.isNull() || !enhanced.save(targetProcessedPath, "PNG")) {
+                QFile::remove(targetSourcePath);
+                emit importError(QString("无法保存预处理图片: %1").arg(filePath));
+                continue;
+            }
         } else {
             // In original mode, processed image is identical to source
             targetProcessedPath = targetSourcePath;
@@ -173,13 +191,18 @@ QVector<Page> ImageService::importImages(const QString& taskId, const QStringLis
 
         // 3. Generate thumbnail
         QImage thumb = img.scaled(260, 260, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        thumb.save(targetThumbPath, "JPG", 85);
+        if (!thumb.save(targetThumbPath, "JPG", 85)) {
+            QFile::remove(targetSourcePath);
+            if (targetProcessedPath != targetSourcePath) QFile::remove(targetProcessedPath);
+            emit importError(QString("无法保存缩略图: %1").arg(filePath));
+            continue;
+        }
 
         // 4. Create Page structure
         Page page;
         page.id = pageId;
         page.taskId = taskId;
-        page.pageIndex = i;
+        page.pageIndex = pageIndex;
         page.originalImagePath = targetSourcePath;
         page.processedImagePath = targetProcessedPath;
         page.thumbnailPath = targetThumbPath;

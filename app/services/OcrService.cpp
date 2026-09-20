@@ -2,6 +2,7 @@
 #include "TaskService.h"
 #include "SettingsService.h"
 #include "ImageService.h"
+#include "StorageService.h"
 #include "../infrastructure/logging/Logger.h"
 #include "../infrastructure/utils/PathUtils.h"
 #include <QtConcurrent/QtConcurrent>
@@ -9,6 +10,9 @@
 #include <QDir>
 #include <QTimer>
 #include <QTcpSocket>
+#include <QProcessEnvironment>
+#include <QUrl>
+#include <QUuid>
 
 namespace HandwritingOCR {
 
@@ -19,6 +23,10 @@ OcrService& OcrService::instance() {
 
 OcrService::OcrService(QObject* parent) : QObject(parent) {
     m_provider = std::make_unique<PaddleOcrProvider>(SettingsService::instance().ocrWorkerUrl());
+    m_workerAuthToken = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    if (auto paddle = dynamic_cast<PaddleOcrProvider*>(m_provider.get())) {
+        paddle->setAuthToken(m_workerAuthToken);
+    }
 
     m_tickerTimer = new QTimer(this);
     connect(m_tickerTimer, &QTimer::timeout, this, &OcrService::onTick);
@@ -34,6 +42,7 @@ OcrService::OcrService(QObject* parent) : QObject(parent) {
 OcrService::~OcrService() {
     stopProgressTimer();
     stopWorkerProcess();
+    m_jobs.waitForFinished();
 }
 
 void OcrService::init() {
@@ -99,13 +108,17 @@ void OcrService::onTick() {
 }
 
 void OcrService::checkWorkerHealth() {
-    QtConcurrent::run([this]() {
+    m_jobs.addFuture(QtConcurrent::run([this]() {
         QString msg;
         bool ok = m_provider && m_provider->checkAvailability(&msg);
         QMetaObject::invokeMethod(this, [this, ok, msg]() {
             setWorkerStatus(ok, msg);
+            if (!ok && msg.contains("正在初始化")
+                && m_workerProcess && m_workerProcess->state() == QProcess::Running) {
+                QTimer::singleShot(2000, this, &OcrService::checkWorkerHealth);
+            }
         }, Qt::QueuedConnection);
-    });
+    }));
 }
 
 void OcrService::startWorkerProcess() {
@@ -113,12 +126,23 @@ void OcrService::startWorkerProcess() {
         return;
     }
 
-    // Check if another instance or process is already listening on port 8766
+    const QUrl workerUrl(SettingsService::instance().ocrWorkerUrl());
+    const QString workerHost = workerUrl.host();
+    const bool isLoopback = workerHost == "127.0.0.1" || workerHost == "localhost" || workerHost == "::1";
+    if (!workerUrl.isValid() || !isLoopback) {
+        setWorkerStatus(false, "远程 OCR 地址不可用，未启动本地 Worker");
+        return;
+    }
+    const quint16 workerPort = static_cast<quint16>(workerUrl.port(8766));
+
+    // Check if another instance or process is already listening on the configured port.
     QTcpSocket testSock;
-    testSock.connectToHost("127.0.0.1", 8766);
+    testSock.connectToHost(workerHost, workerPort);
     if (testSock.waitForConnected(300)) {
         testSock.disconnectFromHost();
-        Logger::instance().info("OcrService", "OCR Worker service already active on port 8766.");
+        // An independently started worker may not require our per-process token.
+        if (auto paddle = dynamic_cast<PaddleOcrProvider*>(m_provider.get())) paddle->setAuthToken(QString());
+        Logger::instance().info("OcrService", QString("OCR Worker service already active on port %1.").arg(workerPort));
         checkWorkerHealth();
         return;
     }
@@ -147,6 +171,12 @@ void OcrService::startWorkerProcess() {
 
     QString scriptDir = QFileInfo(scriptPath).dir().absolutePath();
     m_workerProcess->setWorkingDirectory(scriptDir);
+    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+    environment.insert("OCR_PORT", QString::number(workerPort));
+    environment.insert("OCR_HOST", "127.0.0.1");
+    environment.insert("OCR_TOKEN", m_workerAuthToken);
+    environment.insert("OCR_ALLOWED_ROOTS", QDir(StorageService::instance().getBaseStorageDir()).filePath("tasks"));
+    m_workerProcess->setProcessEnvironment(environment);
 
     Logger::instance().info("OcrService", QString("Launching OCR worker via %1 in %2: %3").arg(pythonExe, scriptDir, scriptPath));
     m_workerProcess->start(pythonExe, args);
@@ -193,6 +223,8 @@ void OcrService::recognizeCurrentPage() {
 
     if (!m_isWorkerRunning) {
         startWorkerProcess();
+        emit ocrError("OCR Worker 尚未就绪，请等待状态显示为“OCR 就绪”后重试。");
+        return;
     }
 
     setProcessing(true);
@@ -202,7 +234,7 @@ void OcrService::recognizeCurrentPage() {
 
     bool filterPrinted = SettingsService::instance().filterPrintedText();
 
-    QtConcurrent::run([this, pageId, imgPath, filterPrinted]() {
+    m_jobs.addFuture(QtConcurrent::run([this, pageId, imgPath, filterPrinted]() {
         OcrRequest req;
         req.imagePath = imgPath;
         req.lang = "ch";
@@ -224,7 +256,7 @@ void OcrService::recognizeCurrentPage() {
                 emit ocrError(errMsg.isEmpty() ? "OCR 识别失败" : errMsg);
             }
         }, Qt::QueuedConnection);
-    });
+    }));
 }
 
 void OcrService::recognizeCurrentTask() {
@@ -247,6 +279,8 @@ void OcrService::recognizeCurrentTask() {
 
     if (!m_isWorkerRunning) {
         startWorkerProcess();
+        emit ocrError("OCR Worker 尚未就绪，请等待状态显示为“OCR 就绪”后重试。");
+        return;
     }
 
     setProcessing(true);
@@ -259,7 +293,7 @@ void OcrService::recognizeCurrentTask() {
 
     bool filterPrinted = SettingsService::instance().filterPrintedText();
 
-    QtConcurrent::run([this, taskId, pages, total, filterPrinted]() {
+    m_jobs.addFuture(QtConcurrent::run([this, taskId, pages, total, filterPrinted]() {
         for (int i = 0; i < total; ++i) {
             if (m_cancelRequested) {
                 Logger::instance().info("OcrService", "Batch OCR cancelled by user.");
@@ -271,7 +305,7 @@ void OcrService::recognizeCurrentTask() {
 
             QMetaObject::invokeMethod(this, [this, i, total]() {
                 setProgress(i, total, QString("正在识别第 %1/%2 页...").arg(i + 1).arg(total));
-            }, Qt::BlockingQueuedConnection);
+            }, Qt::QueuedConnection);
 
             OcrRequest req;
             req.imagePath = imgPath;
@@ -288,7 +322,7 @@ void OcrService::recognizeCurrentTask() {
                     TaskService::instance().updatePageOcrResult(pageId, result);
                     emit pageOcrCompleted(pageId);
                     setProgress(i + 1, total, QString("已完成 %1/%2 页").arg(i + 1).arg(total));
-                }, Qt::BlockingQueuedConnection);
+                }, Qt::QueuedConnection);
             } else {
                 Logger::instance().error("OcrService", QString("Page %1 recognition failed: %2").arg(page.id, errMsg));
             }
@@ -299,7 +333,7 @@ void OcrService::recognizeCurrentTask() {
             setProcessing(false);
             emit taskOcrCompleted(taskId);
         }, Qt::QueuedConnection);
-    });
+    }));
 }
 
 } // namespace HandwritingOCR

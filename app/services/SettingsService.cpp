@@ -30,6 +30,10 @@ void SettingsService::load() {
         m_lanUploadPort = 8765;
     }
     m_storageDir = db.getSetting("storageDir", StorageService::instance().getBaseStorageDir());
+    if (!m_storageDir.trimmed().isEmpty()
+        && QDir::cleanPath(m_storageDir) != QDir::cleanPath(StorageService::instance().getBaseStorageDir())) {
+        StorageService::instance().setBaseStorageDir(m_storageDir);
+    }
     m_theme = db.getSetting("theme", "Light");
 
     emit settingsChanged();
@@ -44,6 +48,7 @@ void SettingsService::setOcrEngine(const QString& val) {
 }
 
 void SettingsService::setLowConfidenceThreshold(double val) {
+    val = qBound(0.01, val, 1.0);
     if (qAbs(m_lowConfidenceThreshold - val) > 0.001) {
         m_lowConfidenceThreshold = val;
         DatabaseManager::instance().setSetting("lowConfidenceThreshold", QString::number(val, 'f', 2));
@@ -68,9 +73,11 @@ void SettingsService::setFilterPrintedText(bool val) {
 }
 
 void SettingsService::setOcrWorkerUrl(const QString& val) {
-    if (m_ocrWorkerUrl != val) {
-        m_ocrWorkerUrl = val;
-        DatabaseManager::instance().setSetting("ocrWorkerUrl", val);
+    const QString normalized = val.trimmed();
+    if (normalized.isEmpty()) return;
+    if (m_ocrWorkerUrl != normalized) {
+        m_ocrWorkerUrl = normalized;
+        DatabaseManager::instance().setSetting("ocrWorkerUrl", normalized);
         emit settingsChanged();
     }
 }
@@ -84,6 +91,7 @@ void SettingsService::setLanUploadEnabled(bool val) {
 }
 
 void SettingsService::setLanUploadPort(int val) {
+    if (val <= 1024 || val > 65535) return;
     if (m_lanUploadPort != val) {
         m_lanUploadPort = val;
         DatabaseManager::instance().setSetting("lanUploadPort", QString::number(val));
