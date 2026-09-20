@@ -15,6 +15,7 @@ ApplicationWindow {
 
     color: "#f8fafc"
 
+    property var appController: app
     property string currentView: "home" // "home" or "proofread"
 
     // Modern Header Navigation Bar
@@ -38,6 +39,7 @@ ApplicationWindow {
             anchors.leftMargin: 24
             anchors.rightMargin: 24
             spacing: 16
+            Layout.minimumWidth: 0
 
             // App Brand Logo & Title
             Row {
@@ -89,14 +91,21 @@ ApplicationWindow {
                 }
             }
 
-            Rectangle { width: 1; height: 22; color: "#e2e8f0"; Layout.leftMargin: 8; Layout.rightMargin: 8 }
+            Rectangle {
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: 22
+                color: "#e2e8f0"
+                Layout.leftMargin: 8
+                Layout.rightMargin: 8
+            }
 
             // Segmented Navigation Tabs
             Rectangle {
-                height: 36
+                Layout.preferredHeight: 36
                 radius: 8
                 color: "#f1f5f9"
-                width: 220
+                Layout.preferredWidth: 220
+                Layout.minimumWidth: 180
                 Layout.alignment: Qt.AlignVCenter
 
                 RowLayout {
@@ -141,7 +150,7 @@ ApplicationWindow {
                         radius: 6
                         color: window.currentView === "proofread" ? "#ffffff" : "transparent"
                         border.color: window.currentView === "proofread" ? "#e2e8f0" : "transparent"
-                        opacity: app.taskService.hasCurrentTask ? 1.0 : 0.45
+                        opacity: window.appController.taskService.hasCurrentTask ? 1.0 : 0.45
 
                         Row {
                             anchors.centerIn: parent
@@ -160,7 +169,7 @@ ApplicationWindow {
 
                         MouseArea {
                             anchors.fill: parent
-                            enabled: app.taskService.hasCurrentTask
+                            enabled: window.appController.taskService.hasCurrentTask
                             cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                             onClicked: window.currentView = "proofread"
                         }
@@ -179,8 +188,8 @@ ApplicationWindow {
                 Rectangle {
                     height: 30
                     radius: 15
-                    color: app.ocrService.isWorkerRunning ? "#ecfdf5" : "#fef2f2"
-                    border.color: app.ocrService.isWorkerRunning ? "#a7f3d0" : "#fecaca"
+                    color: window.appController.ocrService.isWorkerRunning ? "#ecfdf5" : "#fef2f2"
+                    border.color: window.appController.ocrService.isWorkerRunning ? "#a7f3d0" : "#fecaca"
                     width: ocrStatusText.implicitWidth + 28
                     anchors.verticalCenter: parent.verticalCenter
 
@@ -191,15 +200,15 @@ ApplicationWindow {
                             width: 7
                             height: 7
                             radius: 3.5
-                            color: app.ocrService.isWorkerRunning ? "#10b981" : "#ef4444"
+                            color: window.appController.ocrService.isWorkerRunning ? "#10b981" : "#ef4444"
                             anchors.verticalCenter: parent.verticalCenter
                         }
                         Text {
                             id: ocrStatusText
-                            text: app.ocrService.isWorkerRunning ? "OCR 就绪" : "OCR 正在启动"
+                            text: window.appController.ocrService.isWorkerRunning ? "OCR 就绪" : "OCR 正在启动"
                             font.pixelSize: 11
                             font.bold: true
-                            color: app.ocrService.isWorkerRunning ? "#047857" : "#b91c1c"
+                            color: window.appController.ocrService.isWorkerRunning ? "#047857" : "#b91c1c"
                         }
                     }
 
@@ -208,7 +217,7 @@ ApplicationWindow {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: settingsDialog.open()
                         ToolTip.visible: containsMouse
-                        ToolTip.text: app.ocrService.workerStatusMessage || "本地 PaddleOCR 引擎状态"
+                        ToolTip.text: window.appController.ocrService.workerStatusMessage || "本地 PaddleOCR 引擎状态"
                         ToolTip.delay: 300
                     }
                 }
@@ -260,6 +269,7 @@ ApplicationWindow {
 
         TaskHomeView {
             id: homeView
+            appController: window.appController
             onOpenTaskRequested: (taskId) => {
                 window.currentView = "proofread";
             }
@@ -278,6 +288,7 @@ ApplicationWindow {
 
         ProofreadingView {
             id: proofreadView
+            appController: window.appController
             onBackToHomeRequested: window.currentView = "home"
             onScanQrRequested: qrCodeDialog.open()
             onExportRequested: {
@@ -341,7 +352,7 @@ ApplicationWindow {
     }
 
     Connections {
-        target: app
+        target: window.appController
         function onNotifyUser(msg, type) {
             toast.show(msg, type);
         }
@@ -352,13 +363,22 @@ ApplicationWindow {
     }
 
     // Dialog Instances
-    QrCodeDialog { id: qrCodeDialog }
+    QrCodeDialog {
+        id: qrCodeDialog
+        appController: window.appController
+    }
     ConfirmDialog {
         id: confirmDialog
         onConfirmed: (taskId) => {
-            app.taskService.deleteTask(taskId);
+            window.appController.taskService.deleteTask(taskId);
         }
     }
-    SettingsDialog { id: settingsDialog }
-    ExportDialog { id: exportDialog }
+    SettingsDialog {
+        id: settingsDialog
+        appController: window.appController
+    }
+    ExportDialog {
+        id: exportDialog
+        appController: window.appController
+    }
 }

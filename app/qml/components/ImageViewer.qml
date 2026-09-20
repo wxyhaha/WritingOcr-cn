@@ -1,11 +1,13 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
+
+pragma ComponentBehavior: Bound
 
 Item {
     id: root
 
     property string imagePath: ""
+    property var appController
     property var blockModel: null
     property int selectedIndex: blockModel ? blockModel.selectedIndex : -1
     property int imageRotation: 0
@@ -47,7 +49,7 @@ Item {
                 Image {
                     id: imageItem
                     anchors.fill: parent
-                    source: root.imagePath ? app.localFileToUrl(root.imagePath) : ""
+                    source: root.imagePath ? root.appController.localFileToUrl(root.imagePath) : ""
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
                     smooth: true
@@ -60,7 +62,7 @@ Item {
 
                     onStatusChanged: {
                         if (status === Image.Ready) {
-                            Qt.callLater(fitToWindow);
+                            Qt.callLater(root.fitToWindow);
                         }
                     }
                 }
@@ -69,7 +71,7 @@ Item {
                 Item {
                     id: overlayLayer
                     anchors.fill: parent
-                    visible: imageItem.status === Image.Ready && blockModel !== null
+                    visible: imageItem.status === Image.Ready && root.blockModel !== null
 
                     // Scale factors from original image pixels to displayed image pixels
                     property real scaleX: imageItem.implicitWidth > 0 ? (imageWrapper.width / imageItem.implicitWidth) : 1.0
@@ -80,15 +82,17 @@ Item {
 
                         delegate: Rectangle {
                             id: boxRect
+                            required property var model
+                            required property int index
 
                             // Bbox in original image pixel coordinate system
-                            property real bX: model.bboxX * overlayLayer.scaleX
-                            property real bY: model.bboxY * overlayLayer.scaleY
-                            property real bW: model.bboxWidth * overlayLayer.scaleX
-                            property real bH: model.bboxHeight * overlayLayer.scaleY
-                            property bool isLow: model.isLowConfidence
-                            property bool isSel: (model.isSelected === true) || (root.blockModel !== null && root.blockModel.selectedIndex === index)
-                            property bool isPrinted: !model.isHandwriting
+                            property real bX: boxRect.model.bboxX * overlayLayer.scaleX
+                            property real bY: boxRect.model.bboxY * overlayLayer.scaleY
+                            property real bW: boxRect.model.bboxWidth * overlayLayer.scaleX
+                            property real bH: boxRect.model.bboxHeight * overlayLayer.scaleY
+                            property bool isLow: boxRect.model.isLowConfidence
+                            property bool isSel: (boxRect.model.isSelected === true) || (root.blockModel !== null && root.blockModel.selectedIndex === boxRect.index)
+                            property bool isPrinted: !boxRect.model.isHandwriting
 
                             x: bX
                             y: bY
@@ -112,7 +116,7 @@ Item {
                                 color: "transparent"
                                 border.color: "#2563eb"
                                 border.width: 2.0
-                                visible: isSel
+                                visible: boxRect.isSel
                                 opacity: 0.9
                             }
 
@@ -121,10 +125,10 @@ Item {
                                 hoverEnabled: false
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    if (blockModel) {
-                                        blockModel.selectedIndex = index;
+                                    if (root.blockModel) {
+                                        root.blockModel.selectedIndex = boxRect.index;
                                     }
-                                    root.blockClicked(index, blockModel ? blockModel.getBlockMap(index) : null);
+                                    root.blockClicked(boxRect.index, root.blockModel ? root.blockModel.getBlockMap(boxRect.index) : null);
                                 }
                             }
                         }
@@ -241,10 +245,11 @@ Item {
             spacing: 10
 
             Button {
+                id: zoomOutButton
                 width: 26
                 height: 26
                 background: Rectangle {
-                    color: parent.hovered ? "#334155" : "transparent"
+                    color: zoomOutButton.hovered ? "#334155" : "transparent"
                     radius: 13
                 }
                 contentItem: Text { text: "−"; color: "white"; font.bold: true; font.pixelSize: 15; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -263,10 +268,11 @@ Item {
             }
 
             Button {
+                id: zoomInButton
                 width: 26
                 height: 26
                 background: Rectangle {
-                    color: parent.hovered ? "#334155" : "transparent"
+                    color: zoomInButton.hovered ? "#334155" : "transparent"
                     radius: 13
                 }
                 contentItem: Text { text: "+"; color: "white"; font.bold: true; font.pixelSize: 15; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -279,9 +285,10 @@ Item {
             Rectangle { width: 1; height: 16; color: "#475569"; anchors.verticalCenter: parent.verticalCenter }
 
             Button {
+                id: fitButton
                 height: 26
                 background: Rectangle {
-                    color: parent.hovered ? "#334155" : "transparent"
+                    color: fitButton.hovered ? "#334155" : "transparent"
                     radius: 6
                 }
                 contentItem: Text { text: "适应窗口"; color: "#93c5fd"; font.pixelSize: 11; anchors.centerIn: parent }
@@ -289,9 +296,10 @@ Item {
             }
 
             Button {
+                id: originalSizeButton
                 height: 26
                 background: Rectangle {
-                    color: parent.hovered ? "#334155" : "transparent"
+                    color: originalSizeButton.hovered ? "#334155" : "transparent"
                     radius: 6
                 }
                 contentItem: Text { text: "1:1 原图"; color: "#93c5fd"; font.pixelSize: 11; anchors.centerIn: parent }
@@ -302,10 +310,11 @@ Item {
 
             // Rotate buttons
             Button {
+                id: rotateLeftButton
                 width: 26
                 height: 26
                 background: Rectangle {
-                    color: parent.hovered ? "#334155" : "transparent"
+                    color: rotateLeftButton.hovered ? "#334155" : "transparent"
                     radius: 13
                 }
                 contentItem: Text { text: "⟲"; color: "#93c5fd"; font.bold: true; font.pixelSize: 14; anchors.centerIn: parent }
@@ -316,10 +325,11 @@ Item {
             }
 
             Button {
+                id: rotateRightButton
                 width: 26
                 height: 26
                 background: Rectangle {
-                    color: parent.hovered ? "#334155" : "transparent"
+                    color: rotateRightButton.hovered ? "#334155" : "transparent"
                     radius: 13
                 }
                 contentItem: Text { text: "⟳"; color: "#93c5fd"; font.bold: true; font.pixelSize: 14; anchors.centerIn: parent }

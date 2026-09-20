@@ -2,10 +2,13 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
+pragma ComponentBehavior: Bound
+
 Item {
     id: root
 
     property var pageModel: null
+    property var appController
     property int currentIndex: 0
 
     signal pageSelected(int index)
@@ -25,7 +28,7 @@ Item {
         // Sidebar Header
         Rectangle {
             Layout.fillWidth: true
-            height: 48
+            Layout.preferredHeight: 48
             color: "#ffffff"
             border.color: "#e2e8f0"
 
@@ -54,7 +57,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         Text {
                             id: countText
-                            text: `${app.taskService.currentTaskPageCount}`
+                            text: `${root.appController.taskService.currentTaskPageCount}`
                             font.pixelSize: 10
                             font.bold: true
                             color: "#64748b"
@@ -66,10 +69,11 @@ Item {
                 Item { Layout.fillWidth: true }
 
                 Button {
-                    height: 28
+                    id: addPagesButton
+                    Layout.preferredHeight: 28
                     Layout.alignment: Qt.AlignVCenter
                     background: Rectangle {
-                        color: parent.hovered ? "#e2e8f0" : "#f1f5f9"
+                        color: addPagesButton.hovered ? "#e2e8f0" : "#f1f5f9"
                         border.color: "#cbd5e1"
                         radius: 6
                     }
@@ -97,25 +101,28 @@ Item {
             model: root.pageModel
 
             delegate: Item {
+                id: pageDelegate
+                required property var model
+                required property int index
                 width: listView.width - 24
                 height: 148
                 x: 12
 
-                property bool isCurrent: index === root.currentIndex
+                property bool isCurrent: pageDelegate.index === root.currentIndex
 
                 Rectangle {
                     id: cardBg
                     anchors.fill: parent
                     radius: 10
-                    color: isCurrent ? "#ffffff" : (thumbMouseArea.containsMouse ? "#ffffff" : "#f8fafc")
-                    border.width: isCurrent ? 2 : 1
-                    border.color: isCurrent ? "#2563eb" : (thumbMouseArea.containsMouse ? "#93c5fd" : "#e2e8f0")
+                    color: pageDelegate.isCurrent ? "#ffffff" : (thumbMouseArea.containsMouse ? "#ffffff" : "#f8fafc")
+                    border.width: pageDelegate.isCurrent ? 2 : 1
+                    border.color: pageDelegate.isCurrent ? "#2563eb" : (thumbMouseArea.containsMouse ? "#93c5fd" : "#e2e8f0")
 
                     Behavior on border.color { ColorAnimation { duration: 150 } }
 
                     // Active left indicator bar
                     Rectangle {
-                        visible: isCurrent
+                        visible: pageDelegate.isCurrent
                         anchors.left: parent.left
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
@@ -130,15 +137,15 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.pageSelected(index)
+                        onClicked: root.pageSelected(pageDelegate.index)
                     }
 
                     Image {
                         id: thumbImage
                         anchors.fill: parent
                         anchors.margins: 6
-                        anchors.leftMargin: isCurrent ? 10 : 6
-                        source: (model.thumbnailPath && model.thumbnailPath !== "") ? app.localFileToUrl(model.thumbnailPath) : (model.originalImagePath ? app.localFileToUrl(model.originalImagePath) : "")
+                        anchors.leftMargin: pageDelegate.isCurrent ? 10 : 6
+                        source: (pageDelegate.model.thumbnailPath && pageDelegate.model.thumbnailPath !== "") ? root.appController.localFileToUrl(pageDelegate.model.thumbnailPath) : (pageDelegate.model.originalImagePath ? root.appController.localFileToUrl(pageDelegate.model.originalImagePath) : "")
                         fillMode: Image.PreserveAspectFit
                         asynchronous: true
                         smooth: true
@@ -149,15 +156,15 @@ Item {
                         anchors.left: parent.left
                         anchors.top: parent.top
                         anchors.margins: 6
-                        anchors.leftMargin: isCurrent ? 10 : 6
+                        anchors.leftMargin: pageDelegate.isCurrent ? 10 : 6
                         width: 24
                         height: 20
                         radius: 5
-                        color: isCurrent ? "#2563eb" : "#334155"
+                        color: pageDelegate.isCurrent ? "#2563eb" : "#334155"
 
                         Text {
                             anchors.centerIn: parent
-                            text: `${index + 1}`
+                            text: `${pageDelegate.index + 1}`
                             color: "white"
                             font.bold: true
                             font.pixelSize: 11
@@ -166,7 +173,7 @@ Item {
 
                     // Low Confidence Badge
                     Rectangle {
-                        visible: model.lowConfidenceCount > 0
+                        visible: pageDelegate.model.lowConfidenceCount > 0
                         anchors.right: parent.right
                         anchors.top: parent.top
                         anchors.margins: 6
@@ -178,7 +185,7 @@ Item {
                         Text {
                             id: badgeText
                             anchors.centerIn: parent
-                            text: `! ${model.lowConfidenceCount}`
+                            text: `! ${pageDelegate.model.lowConfidenceCount}`
                             color: "#ffffff"
                             font.bold: true
                             font.pixelSize: 10
@@ -187,6 +194,7 @@ Item {
 
                     // Delete Page Button (smooth hover)
                     Button {
+                        id: deletePageButton
                         visible: thumbMouseArea.containsMouse || hovered
                         anchors.right: parent.right
                         anchors.bottom: parent.bottom
@@ -194,7 +202,7 @@ Item {
                         width: 22
                         height: 22
                         background: Rectangle {
-                            color: parent.hovered ? "#fee2e2" : "#ffffff"
+                            color: deletePageButton.hovered ? "#fee2e2" : "#ffffff"
                             border.color: "#fca5a5"
                             radius: 11
                         }
@@ -205,7 +213,7 @@ Item {
                             font.pixelSize: 11
                             anchors.centerIn: parent
                         }
-                        onClicked: root.pageDeleted(index)
+                        onClicked: root.pageDeleted(pageDelegate.index)
                         ToolTip.visible: hovered
                         ToolTip.text: "删除此页"
                         ToolTip.delay: 300

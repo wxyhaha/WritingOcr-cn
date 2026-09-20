@@ -7,9 +7,11 @@ Dialog {
     title: ""
     modal: true
     anchors.centerIn: parent
-    width: 520
-    height: 560
+    width: Math.min(520, Math.max(400, (parent ? parent.width : 520) - 32))
+    height: Math.min(560, Math.max(480, (parent ? parent.height : 560) - 32))
     padding: 0
+
+    property var appController
 
     background: Rectangle {
         color: "#ffffff"
@@ -34,7 +36,7 @@ Dialog {
         // Header
         Rectangle {
             Layout.fillWidth: true
-            height: 56
+            Layout.preferredHeight: 56
             color: "#ffffff"
             radius: 16
 
@@ -56,10 +58,11 @@ Dialog {
                 Item { Layout.fillWidth: true }
 
                 Button {
-                    width: 32
-                    height: 32
+                    id: closeSettingsButton
+                    Layout.preferredWidth: 32
+                    Layout.preferredHeight: 32
                     background: Rectangle {
-                        color: parent.hovered ? "#f1f5f9" : "transparent"
+                        color: closeSettingsButton.hovered ? "#f1f5f9" : "transparent"
                         radius: 16
                     }
                     contentItem: Text { text: "✕"; color: "#64748b"; font.pixelSize: 14; anchors.centerIn: parent }
@@ -138,10 +141,10 @@ Dialog {
                                     from: 0.50
                                     to: 0.95
                                     stepSize: 0.01
-                                    value: app.settingsService.lowConfidenceThreshold
+                                    value: root.appController.settingsService.lowConfidenceThreshold
                                     Layout.fillWidth: true
                                     onMoved: {
-                                        app.settingsService.lowConfidenceThreshold = value;
+                                        root.appController.settingsService.lowConfidenceThreshold = value;
                                     }
                                 }
                             }
@@ -156,10 +159,10 @@ Dialog {
                                     Text { text: "基于像素形态学自动剔除印刷行头与拍照水印"; font.pixelSize: 11; color: "#64748b" }
                                 }
                                 Switch {
-                                    checked: app.settingsService.filterPrintedText
+                                    checked: root.appController.settingsService.filterPrintedText
                                     onToggled: {
-                                        app.settingsService.filterPrintedText = checked;
-                                        app.taskService.applyFilterPrintedToAllPages(checked);
+                                        root.appController.settingsService.filterPrintedText = checked;
+                                        root.appController.taskService.applyFilterPrintedToAllPages(checked);
                                     }
                                 }
                             }
@@ -174,8 +177,8 @@ Dialog {
                                     Text { text: "导入时自动拉伸直方图改善淡色墨水对比度"; font.pixelSize: 11; color: "#64748b" }
                                 }
                                 Switch {
-                                    checked: app.settingsService.autoEnhance
-                                    onToggled: app.settingsService.autoEnhance = checked
+                                    checked: root.appController.settingsService.autoEnhance
+                                    onToggled: root.appController.settingsService.autoEnhance = checked
                                 }
                             }
                         }
@@ -211,15 +214,16 @@ Dialog {
                                 Text { text: "OCR 服务端地址:"; font.pixelSize: 13; color: "#475569"; Layout.preferredWidth: 120 }
                                 TextField {
                                     id: workerUrlField
-                                    text: app.settingsService.ocrWorkerUrl
+                                    text: root.appController.settingsService.ocrWorkerUrl
                                     Layout.fillWidth: true
-                                    onEditingFinished: app.settingsService.ocrWorkerUrl = text
+                                    onEditingFinished: root.appController.settingsService.ocrWorkerUrl = text
                                 }
                                 Button {
+                                    id: checkWorkerButton
                                     text: "检测"
                                     Layout.preferredHeight: 34
-                                    background: Rectangle { color: parent.hovered ? "#e2e8f0" : "#f1f5f9"; border.color: "#cbd5e1"; radius: 6 }
-                                    onClicked: app.ocrService.checkWorkerHealth()
+                                    background: Rectangle { color: checkWorkerButton.hovered ? "#e2e8f0" : "#f1f5f9"; border.color: "#cbd5e1"; radius: 6 }
+                                    onClicked: root.appController.ocrService.checkWorkerHealth()
                                 }
                             }
 
@@ -227,22 +231,22 @@ Dialog {
                             Rectangle {
                                 width: parent.width
                                 height: 32
-                                color: app.ocrService.isWorkerRunning ? "#ecfdf5" : "#fff7ed"
+                                color: root.appController.ocrService.isWorkerRunning ? "#ecfdf5" : "#fff7ed"
                                 radius: 6
-                                border.color: app.ocrService.isWorkerRunning ? "#a7f3d0" : "#fed7aa"
+                                border.color: root.appController.ocrService.isWorkerRunning ? "#a7f3d0" : "#fed7aa"
 
                                 Row {
                                     anchors.centerIn: parent
                                     spacing: 6
                                     Text {
-                                        text: app.ocrService.isWorkerRunning ? "●" : "○"
-                                        color: app.ocrService.isWorkerRunning ? "#10b981" : "#f97316"
+                                        text: root.appController.ocrService.isWorkerRunning ? "●" : "○"
+                                        color: root.appController.ocrService.isWorkerRunning ? "#10b981" : "#f97316"
                                         font.pixelSize: 10
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
                                     Text {
-                                        text: app.ocrService.workerStatusMessage || "本地 PaddleOCR 服务状态"
-                                        color: app.ocrService.isWorkerRunning ? "#047857" : "#c2410c"
+                                        text: root.appController.ocrService.workerStatusMessage || "本地 PaddleOCR 服务状态"
+                                        color: root.appController.ocrService.isWorkerRunning ? "#047857" : "#c2410c"
                                         font.pixelSize: 11
                                         font.bold: true
                                         anchors.verticalCenter: parent.verticalCenter
@@ -258,7 +262,7 @@ Dialog {
         // Footer
         Rectangle {
             Layout.fillWidth: true
-            height: 54
+            Layout.preferredHeight: 54
             color: "#ffffff"
             radius: 16
 
@@ -271,6 +275,7 @@ Dialog {
             }
 
             Button {
+                id: finishSettingsButton
                 text: "完成"
                 anchors.right: parent.right
                 anchors.rightMargin: 20
@@ -278,7 +283,7 @@ Dialog {
                 height: 34
                 width: 90
                 background: Rectangle {
-                    color: parent.hovered ? "#1d4ed8" : "#2563eb"
+                    color: finishSettingsButton.hovered ? "#1d4ed8" : "#2563eb"
                     radius: 6
                 }
                 contentItem: Text {

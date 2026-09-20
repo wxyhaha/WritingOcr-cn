@@ -7,8 +7,8 @@ Dialog {
     title: ""
     modal: true
     anchors.centerIn: parent
-    width: 440
-    height: 340
+    width: Math.min(440, Math.max(360, (parent ? parent.width : 440) - 32))
+    height: Math.min(340, Math.max(300, (parent ? parent.height : 340) - 32))
     padding: 0
 
     property string targetTaskId: ""
@@ -39,7 +39,7 @@ Dialog {
         // Header
         Rectangle {
             Layout.fillWidth: true
-            height: 54
+            Layout.preferredHeight: 54
             color: "#ffffff"
             radius: 16
 
@@ -77,10 +77,11 @@ Dialog {
                 Item { Layout.fillWidth: true }
 
                 Button {
-                    width: 30
-                    height: 30
+                    id: closeConfirmButton
+                    Layout.preferredWidth: 30
+                    Layout.preferredHeight: 30
                     background: Rectangle {
-                        color: parent.hovered ? "#f1f5f9" : "transparent"
+                        color: closeConfirmButton.hovered ? "#f1f5f9" : "transparent"
                         radius: 15
                     }
                     contentItem: Text { text: "✕"; color: "#64748b"; font.pixelSize: 13; anchors.centerIn: parent }
@@ -116,7 +117,7 @@ Dialog {
             // Danger info callout card
             Rectangle {
                 Layout.fillWidth: true
-                height: infoCol.implicitHeight + 18
+                Layout.preferredHeight: infoCol.implicitHeight + 18
                 color: "#fff1f2"
                 border.color: "#fecdd3"
                 radius: 8
@@ -149,7 +150,7 @@ Dialog {
         // Footer Action Buttons
         Rectangle {
             Layout.fillWidth: true
-            height: 56
+            Layout.preferredHeight: 56
             color: "#ffffff"
             radius: 16
 
@@ -168,10 +169,11 @@ Dialog {
                 spacing: 10
 
                 Button {
+                    id: cancelConfirmButton
                     height: 36
                     width: 80
                     background: Rectangle {
-                        color: parent.hovered ? "#e2e8f0" : "#f1f5f9"
+                        color: cancelConfirmButton.hovered ? "#e2e8f0" : "#f1f5f9"
                         border.color: "#cbd5e1"
                         radius: 6
                     }
@@ -186,10 +188,11 @@ Dialog {
                 }
 
                 Button {
+                    id: deleteConfirmButton
                     height: 36
                     width: 96
                     background: Rectangle {
-                        color: parent.hovered ? "#be123c" : "#e11d48"
+                        color: deleteConfirmButton.hovered ? "#be123c" : "#e11d48"
                         radius: 6
                     }
                     contentItem: Row {

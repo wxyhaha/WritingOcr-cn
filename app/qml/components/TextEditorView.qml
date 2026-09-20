@@ -2,10 +2,13 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
+pragma ComponentBehavior: Bound
+
 Item {
     id: root
 
     property string text: ""
+    property var appController
     property var blockModel: null
     property int selectedIndex: blockModel ? blockModel.selectedIndex : -1
     property int editorFontSize: 15
@@ -81,7 +84,7 @@ Item {
         // 1. Editor Quick Actions Toolbar
         Rectangle {
             Layout.fillWidth: true
-            height: 44
+            Layout.preferredHeight: 44
             color: "#ffffff"
             border.color: "#e2e8f0"
 
@@ -113,9 +116,10 @@ Item {
 
                 // Search toggle button
                 Button {
-                    height: 26
+                    id: searchToggleButton
+                    Layout.preferredHeight: 26
                     background: Rectangle {
-                        color: root.isSearchOpen ? "#eff6ff" : (parent.hovered ? "#f1f5f9" : "transparent")
+                        color: root.isSearchOpen ? "#eff6ff" : (searchToggleButton.hovered ? "#f1f5f9" : "transparent")
                         border.color: root.isSearchOpen ? "#3b82f6" : "#cbd5e1"
                         radius: 4
                     }
@@ -142,10 +146,11 @@ Item {
                     Layout.alignment: Qt.AlignVCenter
 
                     Button {
+                        id: decreaseFontButton
                         height: 26
                         width: 26
                         background: Rectangle {
-                            color: parent.hovered ? "#f1f5f9" : "transparent"
+                            color: decreaseFontButton.hovered ? "#f1f5f9" : "transparent"
                             border.color: "#cbd5e1"
                             radius: 4
                         }
@@ -159,10 +164,11 @@ Item {
                     }
 
                     Button {
+                        id: increaseFontButton
                         height: 26
                         width: 26
                         background: Rectangle {
-                            color: parent.hovered ? "#f1f5f9" : "transparent"
+                            color: increaseFontButton.hovered ? "#f1f5f9" : "transparent"
                             border.color: "#cbd5e1"
                             radius: 4
                         }
@@ -178,12 +184,13 @@ Item {
 
                 // Copy text button
                 Button {
-                    height: 28
+                    id: copyTextButton
+                    Layout.preferredHeight: 28
                     Layout.alignment: Qt.AlignVCenter
                     enabled: textArea.text.trim().length > 0
                     background: Rectangle {
-                        color: parent.hovered ? "#eff6ff" : "#f8fafc"
-                        border.color: parent.hovered ? "#bfdbfe" : "#cbd5e1"
+                        color: copyTextButton.hovered ? "#eff6ff" : "#f8fafc"
+                        border.color: copyTextButton.hovered ? "#bfdbfe" : "#cbd5e1"
                         radius: 6
                     }
                     contentItem: Row {
@@ -193,16 +200,16 @@ Item {
                         Text { text: "复制文本"; font.pixelSize: 11; font.bold: true; color: "#1d4ed8"; anchors.verticalCenter: parent.verticalCenter }
                     }
                     onClicked: {
-                        app.copyToClipboard(textArea.text);
+                        root.appController.copyToClipboard(textArea.text);
                     }
                 }
 
                 // Word count pill
                 Rectangle {
-                    height: 24
+                    Layout.preferredHeight: 24
                     radius: 12
                     color: "#f1f5f9"
-                    width: wordCountText.implicitWidth + 14
+                    Layout.preferredWidth: wordCountText.implicitWidth + 14
                     Layout.alignment: Qt.AlignVCenter
 
                     Text {
@@ -324,8 +331,8 @@ Item {
 
                     // Match counter badge
                     Rectangle {
-                        height: 26
-                        width: matchCountText.implicitWidth + 12
+                        Layout.preferredHeight: 26
+                        Layout.preferredWidth: matchCountText.implicitWidth + 12
                         radius: 4
                         color: searchBar.matchCount > 0 ? "#eff6ff" : "#f1f5f9"
                         border.color: searchBar.matchCount > 0 ? "#bfdbfe" : "#e2e8f0"
@@ -339,27 +346,30 @@ Item {
                     }
 
                     Button {
-                        height: 26
-                        width: 26
+                        id: previousMatchButton
+                        Layout.preferredHeight: 26
+                        Layout.preferredWidth: 26
                         enabled: searchBar.matchCount > 0
-                        background: Rectangle { color: parent.hovered ? "#e2e8f0" : "#f1f5f9"; border.color: "#cbd5e1"; radius: 4 }
+                        background: Rectangle { color: previousMatchButton.hovered ? "#e2e8f0" : "#f1f5f9"; border.color: "#cbd5e1"; radius: 4 }
                         contentItem: Text { text: "▲"; font.pixelSize: 10; color: parent.enabled ? "#334155" : "#94a3b8"; anchors.centerIn: parent }
                         onClicked: searchBar.prevMatch()
                     }
 
                     Button {
-                        height: 26
-                        width: 26
+                        id: nextMatchButton
+                        Layout.preferredHeight: 26
+                        Layout.preferredWidth: 26
                         enabled: searchBar.matchCount > 0
-                        background: Rectangle { color: parent.hovered ? "#e2e8f0" : "#f1f5f9"; border.color: "#cbd5e1"; radius: 4 }
+                        background: Rectangle { color: nextMatchButton.hovered ? "#e2e8f0" : "#f1f5f9"; border.color: "#cbd5e1"; radius: 4 }
                         contentItem: Text { text: "▼"; font.pixelSize: 10; color: parent.enabled ? "#334155" : "#94a3b8"; anchors.centerIn: parent }
                         onClicked: searchBar.nextMatch()
                     }
 
                     Button {
-                        height: 26
-                        width: 26
-                        background: Rectangle { color: parent.hovered ? "#fee2e2" : "transparent"; radius: 4 }
+                        id: closeSearchButton
+                        Layout.preferredHeight: 26
+                        Layout.preferredWidth: 26
+                        background: Rectangle { color: closeSearchButton.hovered ? "#fee2e2" : "transparent"; radius: 4 }
                         contentItem: Text { text: "✕"; font.pixelSize: 12; color: "#64748b"; anchors.centerIn: parent }
                         onClicked: root.isSearchOpen = false
                     }
@@ -390,11 +400,12 @@ Item {
                     }
 
                     Button {
-                        height: 26
+                        id: replaceButton
+                        Layout.preferredHeight: 26
                         text: "替换"
                         enabled: searchBar.matchCount > 0
                         background: Rectangle {
-                            color: parent.enabled ? (parent.hovered ? "#dbeafe" : "#eff6ff") : "#f1f5f9"
+                            color: replaceButton.enabled ? (replaceButton.hovered ? "#dbeafe" : "#eff6ff") : "#f1f5f9"
                             border.color: parent.enabled ? "#bfdbfe" : "#e2e8f0"
                             radius: 4
                         }
@@ -403,11 +414,12 @@ Item {
                     }
 
                     Button {
-                        height: 26
+                        id: replaceAllButton
+                        Layout.preferredHeight: 26
                         text: "全部替换"
                         enabled: searchBar.matchCount > 0
                         background: Rectangle {
-                            color: parent.enabled ? (parent.hovered ? "#dbeafe" : "#eff6ff") : "#f1f5f9"
+                            color: replaceAllButton.enabled ? (replaceAllButton.hovered ? "#dbeafe" : "#eff6ff") : "#f1f5f9"
                             border.color: parent.enabled ? "#bfdbfe" : "#e2e8f0"
                             radius: 4
                         }

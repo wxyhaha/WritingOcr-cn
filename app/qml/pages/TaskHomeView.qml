@@ -1,10 +1,14 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtQuick.Dialogs
+import QtQuick.Dialogs 6.5
+
+pragma ComponentBehavior: Bound
 
 Item {
     id: root
+
+    property var appController
 
     signal openTaskRequested(string taskId)
     signal scanQrRequested()
@@ -17,7 +21,7 @@ Item {
         fileMode: FileDialog.OpenFiles
         nameFilters: ["图片文件 (*.jpg *.jpeg *.png *.webp *.bmp)"]
         onAccepted: {
-            app.importFiles(selectedFiles);
+            root.appController.importFiles(selectedFiles);
         }
     }
 
@@ -59,7 +63,7 @@ Item {
                     anchors.fill: parent
                     onDropped: (drop) => {
                         if (drop.hasUrls) {
-                            app.importFiles(drop.urls);
+                            root.appController.importFiles(drop.urls);
                         }
                     }
                 }
@@ -118,9 +122,10 @@ Item {
 
                         // Primary Action: Choose from computer
                         Button {
+                            id: importButton
                             height: 40
                             background: Rectangle {
-                                color: parent.hovered ? "#1d4ed8" : "#2563eb"
+                                color: importButton.hovered ? "#1d4ed8" : "#2563eb"
                                 radius: 8
                                 Behavior on color { ColorAnimation { duration: 150 } }
                             }
@@ -135,10 +140,11 @@ Item {
 
                         // Mobile scan upload
                         Button {
+                            id: scanButton
                             height: 40
                             background: Rectangle {
-                                color: parent.hovered ? "#dcfce7" : "#ecfdf5"
-                                border.color: parent.hovered ? "#86efac" : "#a7f3d0"
+                                color: scanButton.hovered ? "#dcfce7" : "#ecfdf5"
+                                border.color: scanButton.hovered ? "#86efac" : "#a7f3d0"
                                 radius: 8
                                 Behavior on color { ColorAnimation { duration: 150 } }
                             }
@@ -153,10 +159,11 @@ Item {
 
                         // New blank task
                         Button {
+                            id: newTaskButton
                             height: 40
                             background: Rectangle {
-                                color: parent.hovered ? "#f1f5f9" : "#ffffff"
-                                border.color: parent.hovered ? "#94a3b8" : "#cbd5e1"
+                                color: newTaskButton.hovered ? "#f1f5f9" : "#ffffff"
+                                border.color: newTaskButton.hovered ? "#94a3b8" : "#cbd5e1"
                                 radius: 8
                                 Behavior on color { ColorAnimation { duration: 150 } }
                             }
@@ -167,7 +174,7 @@ Item {
                                 Text { text: "新建空白"; color: "#334155"; font.bold: true; font.pixelSize: 13; anchors.verticalCenter: parent.verticalCenter }
                             }
                             onClicked: {
-                                let tid = app.taskService.createNewTask();
+                                let tid = root.appController.taskService.createNewTask();
                                 if (tid) root.openTaskRequested(tid);
                             }
                         }
@@ -178,7 +185,7 @@ Item {
             // 2. Section Header with Page Margins
             RowLayout {
                 width: parent.width
-                visible: app.taskListModel.count > 0
+                visible: root.appController.taskListModel.count > 0
 
                 Row {
                     spacing: 10
@@ -202,7 +209,7 @@ Item {
 
                         Text {
                             id: countLabel
-                            text: `${app.taskListModel.count} 篇`
+                            text: `${root.appController.taskListModel.count} 篇`
                             font.pixelSize: 11
                             font.bold: true
                             color: "#1d4ed8"
@@ -219,13 +226,15 @@ Item {
                 id: cardGrid
                 width: parent.width
                 spacing: 20
-                visible: app.taskListModel.count > 0
+                visible: root.appController.taskListModel.count > 0
 
                 Repeater {
-                    model: app.taskListModel
+                    model: root.appController.taskListModel
 
                     delegate: Rectangle {
                         id: taskCard
+                        required property var model
+                        required property int index
                         width: 270
                         height: 310
                         radius: 16
@@ -251,8 +260,8 @@ Item {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                app.taskService.loadTask(model.id);
-                                root.openTaskRequested(model.id);
+                                root.appController.taskService.loadTask(taskCard.model.id);
+                                root.openTaskRequested(taskCard.model.id);
                             }
                         }
 
@@ -291,9 +300,9 @@ Item {
                             Image {
                                 id: coverImg
                                 anchors.fill: parent
-                                source: (model.coverThumbnail && model.coverThumbnail !== "")
-                                        ? app.localFileToUrl(model.coverThumbnail)
-                                        : ((model.coverImage && model.coverImage !== "") ? app.localFileToUrl(model.coverImage) : "")
+                                source: (taskCard.model.coverThumbnail && taskCard.model.coverThumbnail !== "")
+                                        ? root.appController.localFileToUrl(taskCard.model.coverThumbnail)
+                                        : ((taskCard.model.coverImage && taskCard.model.coverImage !== "") ? root.appController.localFileToUrl(taskCard.model.coverImage) : "")
                                 fillMode: Image.PreserveAspectCrop
                                 asynchronous: true
                                 smooth: true
@@ -315,7 +324,7 @@ Item {
                                 Text {
                                     id: pageBadgeText
                                     anchors.centerIn: parent
-                                    text: `📄 ${model.pageCount} 页`
+                                    text: `📄 ${taskCard.model.pageCount} 页`
                                     font.pixelSize: 11
                                     font.bold: true
                                     color: "#ffffff"
@@ -324,7 +333,7 @@ Item {
 
                             // Top-Right Low Confidence Warning Badge
                             Rectangle {
-                                visible: model.lowConfidenceCount > 0
+                                visible: taskCard.model.lowConfidenceCount > 0
                                 anchors.right: parent.right
                                 anchors.top: parent.top
                                 anchors.margins: 8
@@ -336,7 +345,7 @@ Item {
                                 Text {
                                     id: lowConfBadgeText
                                     anchors.centerIn: parent
-                                    text: `⚠️ ${model.lowConfidenceCount}`
+                                    text: `⚠️ ${taskCard.model.lowConfidenceCount}`
                                     font.pixelSize: 11
                                     font.bold: true
                                     color: "#ffffff"
@@ -399,7 +408,7 @@ Item {
                                 // Task Title
                                 Text {
                                     width: parent.width
-                                    text: model.title
+                                    text: taskCard.model.title
                                     font.bold: true
                                     font.pixelSize: 14
                                     color: "#0f172a"
@@ -421,7 +430,7 @@ Item {
 
                                         Text {
                                             id: wordBadgeText
-                                            text: `✍️ ${model.totalCharacters} 字`
+                                            text: `✍️ ${taskCard.model.totalCharacters} 字`
                                             font.pixelSize: 11
                                             color: "#475569"
                                             anchors.centerIn: parent
@@ -430,7 +439,7 @@ Item {
 
                                     // Date
                                     Text {
-                                        text: `${model.updatedAt.substring(5, 16).replace('T', ' ')}`
+                                        text: `${taskCard.model.updatedAt.substring(5, 16).replace('T', ' ')}`
                                         font.pixelSize: 11
                                         color: "#94a3b8"
                                         anchors.verticalCenter: parent.verticalCenter
@@ -446,11 +455,12 @@ Item {
                                 spacing: 8
 
                                 Button {
-                                    height: 30
+                                    id: exportTaskButton
+                                    Layout.preferredHeight: 30
                                     Layout.fillWidth: true
                                     background: Rectangle {
-                                        color: parent.hovered ? "#eff6ff" : "#f8fafc"
-                                        border.color: parent.hovered ? "#bfdbfe" : "#e2e8f0"
+                                        color: exportTaskButton.hovered ? "#eff6ff" : "#f8fafc"
+                                        border.color: exportTaskButton.hovered ? "#bfdbfe" : "#e2e8f0"
                                         radius: 6
                                     }
                                     contentItem: Row {
@@ -459,15 +469,16 @@ Item {
                                         Text { text: "📥"; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
                                         Text { text: "导出"; font.pixelSize: 11; font.bold: true; color: "#334155"; anchors.verticalCenter: parent.verticalCenter }
                                     }
-                                    onClicked: root.exportTaskRequested(model.id)
+                                    onClicked: root.exportTaskRequested(taskCard.model.id)
                                 }
 
                                 Button {
-                                    height: 30
+                                    id: deleteTaskButton
+                                    Layout.preferredHeight: 30
                                     Layout.preferredWidth: 34
                                     background: Rectangle {
-                                        color: parent.hovered ? "#fee2e2" : "#f8fafc"
-                                        border.color: parent.hovered ? "#fca5a5" : "#e2e8f0"
+                                        color: deleteTaskButton.hovered ? "#fee2e2" : "#f8fafc"
+                                        border.color: deleteTaskButton.hovered ? "#fca5a5" : "#e2e8f0"
                                         radius: 6
                                     }
                                     contentItem: Text {
@@ -475,7 +486,7 @@ Item {
                                         font.pixelSize: 11
                                         anchors.centerIn: parent
                                     }
-                                    onClicked: root.deleteTaskRequested(model.id, model.title, model.pageCount)
+                                    onClicked: root.deleteTaskRequested(taskCard.model.id, taskCard.model.title, taskCard.model.pageCount)
                                     ToolTip.visible: hovered
                                     ToolTip.text: "删除任务"
                                     ToolTip.delay: 300
@@ -488,7 +499,7 @@ Item {
 
             // Empty State Card (when no tasks)
             Rectangle {
-                visible: app.taskListModel.count === 0
+                visible: root.appController.taskListModel.count === 0
                 width: parent.width
                 height: 220
                 color: "#ffffff"

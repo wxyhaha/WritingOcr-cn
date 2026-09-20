@@ -7,11 +7,12 @@ Dialog {
     title: ""
     modal: true
     anchors.centerIn: parent
-    width: 480
-    height: 380
+    width: Math.min(480, Math.max(380, (parent ? parent.width : 480) - 32))
+    height: Math.min(380, Math.max(340, (parent ? parent.height : 380) - 32))
     padding: 0
 
     property string targetTaskId: ""
+    property var appController
 
     background: Rectangle {
         color: "#ffffff"
@@ -35,7 +36,7 @@ Dialog {
         // Header
         Rectangle {
             Layout.fillWidth: true
-            height: 56
+            Layout.preferredHeight: 56
             color: "#ffffff"
             radius: 16
 
@@ -54,10 +55,11 @@ Dialog {
                 Item { Layout.fillWidth: true }
 
                 Button {
-                    width: 32
-                    height: 32
+                    id: closeExportButton
+                    Layout.preferredWidth: 32
+                    Layout.preferredHeight: 32
                     background: Rectangle {
-                        color: parent.hovered ? "#f1f5f9" : "transparent"
+                        color: closeExportButton.hovered ? "#f1f5f9" : "transparent"
                         radius: 16
                     }
                     contentItem: Text { text: "✕"; color: "#64748b"; font.pixelSize: 14; anchors.centerIn: parent }
@@ -132,10 +134,10 @@ Dialog {
                         }
 
                         Rectangle {
-                            height: 20
+                            Layout.preferredHeight: 20
                             radius: 4
                             color: "#dbeafe"
-                            width: recText.implicitWidth + 10
+                            Layout.preferredWidth: recText.implicitWidth + 10
                             Text {
                                 id: recText
                                 text: "推荐"
@@ -233,7 +235,7 @@ Dialog {
         // Footer
         Rectangle {
             Layout.fillWidth: true
-            height: 56
+            Layout.preferredHeight: 56
             color: "#ffffff"
             radius: 16
 
@@ -252,9 +254,10 @@ Dialog {
                 spacing: 10
 
                 Button {
+                    id: cancelExportButton
                     height: 36
                     background: Rectangle {
-                        color: parent.hovered ? "#e2e8f0" : "#f1f5f9"
+                        color: cancelExportButton.hovered ? "#e2e8f0" : "#f1f5f9"
                         border.color: "#cbd5e1"
                         radius: 6
                     }
@@ -268,9 +271,10 @@ Dialog {
                 }
 
                 Button {
+                    id: confirmExportButton
                     height: 36
                     background: Rectangle {
-                        color: parent.hovered ? "#059669" : "#10b981"
+                        color: confirmExportButton.hovered ? "#059669" : "#10b981"
                         radius: 6
                     }
                     contentItem: Row {
@@ -281,11 +285,11 @@ Dialog {
                     }
                     onClicked: {
                         let fmt = docxRadio.checked ? "docx" : (mdRadio.checked ? "md" : "txt");
-                        let defaultPath = app.exportService.getDefaultExportPath(fmt);
+                        let defaultPath = root.appController.exportService.getDefaultExportPath(fmt);
                         if (root.targetTaskId) {
-                            app.exportService.exportTaskById(root.targetTaskId, fmt, defaultPath);
+                            root.appController.exportService.exportTaskById(root.targetTaskId, fmt, defaultPath);
                         } else {
-                            app.exportService.exportCurrentTask(fmt, defaultPath);
+                            root.appController.exportService.exportCurrentTask(fmt, defaultPath);
                         }
                         root.close();
                     }
