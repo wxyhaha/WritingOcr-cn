@@ -1,4 +1,6 @@
 import QtQuick
+import "../components"
+import "../components/Theme.js" as Theme
 import QtQuick.Controls
 import QtQuick.Layouts
 
@@ -15,9 +17,9 @@ Dialog {
     property var appController
 
     background: Rectangle {
-        color: "#ffffff"
+        color: Theme.paper
         radius: 16
-        border.color: "#e2e8f0"
+        border.color: Theme.border
 
         Rectangle {
             anchors.fill: parent
@@ -37,7 +39,7 @@ Dialog {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 56
-            color: "#ffffff"
+            color: Theme.paper
             radius: 16
 
             RowLayout {
@@ -48,8 +50,8 @@ Dialog {
                 Row {
                     spacing: 8
                     Layout.alignment: Qt.AlignVCenter
-                    Text { text: "📥"; font.pixelSize: 18; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: "导出校对文章"; font.bold: true; font.pixelSize: 16; color: "#0f172a" }
+                    Icon { name: "download"; size: 18; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: "导出校对文章"; font.bold: true; font.pixelSize: 16; color: Theme.ink }
                 }
 
                 Item { Layout.fillWidth: true }
@@ -59,10 +61,10 @@ Dialog {
                     Layout.preferredWidth: 32
                     Layout.preferredHeight: 32
                     background: Rectangle {
-                        color: closeExportButton.hovered ? "#f1f5f9" : "transparent"
+                        color: closeExportButton.hovered ? Theme.surface : "transparent"
                         radius: 16
                     }
-                    contentItem: Text { text: "✕"; color: "#64748b"; font.pixelSize: 14; anchors.centerIn: parent }
+                    contentItem: Icon { name: "close"; color: Theme.secondary; size: 18; anchors.centerIn: parent }
                     onClicked: root.close()
                 }
             }
@@ -72,7 +74,7 @@ Dialog {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 height: 1
-                color: "#e2e8f0"
+                color: Theme.border
             }
         }
 
@@ -86,7 +88,7 @@ Dialog {
             Text {
                 text: "选择导出格式 (将导出所有页面校对后的最终文本):"
                 font.pixelSize: 13
-                color: "#475569"
+                color: Theme.secondary
             }
 
             ButtonGroup { id: formatGroup }
@@ -101,8 +103,8 @@ Dialog {
                     width: parent.width
                     height: 44
                     radius: 8
-                    color: docxRadio.checked ? "#eff6ff" : (docxMouseArea.containsMouse ? "#f8fafc" : "#ffffff")
-                    border.color: docxRadio.checked ? "#3b82f6" : "#e2e8f0"
+                    color: docxRadio.checked ? Theme.accentSoft : (docxMouseArea.containsMouse ? Theme.background : Theme.paper)
+                    border.color: docxRadio.checked ? Theme.accent : Theme.border
                     border.width: docxRadio.checked ? 1.5 : 1
 
                     MouseArea {
@@ -129,21 +131,21 @@ Dialog {
                             text: "Microsoft Word 文档 (.docx)"
                             font.bold: true
                             font.pixelSize: 13
-                            color: "#1e293b"
+                            color: Theme.ink
                             Layout.fillWidth: true
                         }
 
                         Rectangle {
                             Layout.preferredHeight: 20
                             radius: 4
-                            color: "#dbeafe"
+                            color: Theme.accentSoft
                             Layout.preferredWidth: recText.implicitWidth + 10
                             Text {
                                 id: recText
                                 text: "推荐"
                                 font.pixelSize: 10
                                 font.bold: true
-                                color: "#1d4ed8"
+                                color: Theme.accentHover
                                 anchors.centerIn: parent
                             }
                         }
@@ -155,8 +157,8 @@ Dialog {
                     width: parent.width
                     height: 44
                     radius: 8
-                    color: mdRadio.checked ? "#eff6ff" : (mdMouseArea.containsMouse ? "#f8fafc" : "#ffffff")
-                    border.color: mdRadio.checked ? "#3b82f6" : "#e2e8f0"
+                    color: mdRadio.checked ? Theme.accentSoft : (mdMouseArea.containsMouse ? Theme.background : Theme.paper)
+                    border.color: mdRadio.checked ? Theme.accent : Theme.border
                     border.width: mdRadio.checked ? 1.5 : 1
 
                     MouseArea {
@@ -181,7 +183,7 @@ Dialog {
                         Text {
                             text: "Markdown 笔记文档 (.md)"
                             font.pixelSize: 13
-                            color: "#1e293b"
+                            color: Theme.ink
                             Layout.fillWidth: true
                         }
                     }
@@ -192,8 +194,8 @@ Dialog {
                     width: parent.width
                     height: 44
                     radius: 8
-                    color: txtRadio.checked ? "#eff6ff" : (txtMouseArea.containsMouse ? "#f8fafc" : "#ffffff")
-                    border.color: txtRadio.checked ? "#3b82f6" : "#e2e8f0"
+                    color: txtRadio.checked ? Theme.accentSoft : (txtMouseArea.containsMouse ? Theme.background : Theme.paper)
+                    border.color: txtRadio.checked ? Theme.accent : Theme.border
                     border.width: txtRadio.checked ? 1.5 : 1
 
                     MouseArea {
@@ -218,7 +220,7 @@ Dialog {
                         Text {
                             text: "纯文本文件 (.txt)"
                             font.pixelSize: 13
-                            color: "#1e293b"
+                            color: Theme.ink
                             Layout.fillWidth: true
                         }
                     }
@@ -228,7 +230,7 @@ Dialog {
             Text {
                 text: "导出的文件将自动保存至系统「文档 / HandwritingOCR」文件夹中。"
                 font.pixelSize: 11
-                color: "#64748b"
+                color: Theme.secondary
             }
         }
 
@@ -236,7 +238,7 @@ Dialog {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 56
-            color: "#ffffff"
+            color: Theme.paper
             radius: 16
 
             Rectangle {
@@ -244,7 +246,7 @@ Dialog {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 height: 1
-                color: "#e2e8f0"
+                color: Theme.border
             }
 
             Row {
@@ -257,13 +259,13 @@ Dialog {
                     id: cancelExportButton
                     height: 36
                     background: Rectangle {
-                        color: cancelExportButton.hovered ? "#e2e8f0" : "#f1f5f9"
-                        border.color: "#cbd5e1"
+                        color: cancelExportButton.hovered ? Theme.border : Theme.surface
+                        border.color: Theme.border
                         radius: 6
                     }
                     contentItem: Text {
                         text: "取消"
-                        color: "#475569"
+                        color: Theme.secondary
                         font.pixelSize: 12
                         anchors.centerIn: parent
                     }
@@ -274,13 +276,13 @@ Dialog {
                     id: confirmExportButton
                     height: 36
                     background: Rectangle {
-                        color: confirmExportButton.hovered ? "#059669" : "#10b981"
+                        color: confirmExportButton.hovered ? Theme.accent : Theme.accent
                         radius: 6
                     }
                     contentItem: Row {
                         anchors.centerIn: parent
                         spacing: 4
-                        Text { text: "📥"; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+                        Icon { name: "download"; color: Theme.paper; size: 18; anchors.verticalCenter: parent.verticalCenter }
                         Text { text: "立即导出"; color: "white"; font.bold: true; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
                     }
                     onClicked: {

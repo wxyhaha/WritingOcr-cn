@@ -1,4 +1,6 @@
 import QtQuick
+import "../components"
+import "../components/Theme.js" as Theme
 import QtQuick.Controls
 import QtQuick.Layouts
 
@@ -18,9 +20,9 @@ Dialog {
     }
 
     background: Rectangle {
-        color: "#ffffff"
+        color: Theme.paper
         radius: 16
-        border.color: "#e2e8f0"
+        border.color: Theme.border
 
         Rectangle {
             anchors.fill: parent
@@ -40,7 +42,7 @@ Dialog {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 56
-            color: "#ffffff"
+            color: Theme.paper
             radius: 16
 
             RowLayout {
@@ -51,8 +53,8 @@ Dialog {
                 Row {
                     spacing: 8
                     Layout.alignment: Qt.AlignVCenter
-                    Text { text: "📱"; font.pixelSize: 18; anchors.verticalCenter: parent.verticalCenter }
-                    Text { text: "手机局域网扫码上传"; font.bold: true; font.pixelSize: 16; color: "#0f172a" }
+                    Icon { name: "phone"; size: 18; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: "手机局域网扫码上传"; font.bold: true; font.pixelSize: 16; color: Theme.ink }
                 }
 
                 Item { Layout.fillWidth: true }
@@ -62,10 +64,10 @@ Dialog {
                     Layout.preferredWidth: 32
                     Layout.preferredHeight: 32
                     background: Rectangle {
-                        color: closeQrButton.hovered ? "#f1f5f9" : "transparent"
+                        color: closeQrButton.hovered ? Theme.surface : "transparent"
                         radius: 16
                     }
-                    contentItem: Text { text: "✕"; color: "#64748b"; font.pixelSize: 14; anchors.centerIn: parent }
+                    contentItem: Icon { name: "close"; color: Theme.secondary; size: 18; anchors.centerIn: parent }
                     onClicked: root.close()
                 }
             }
@@ -75,7 +77,7 @@ Dialog {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 height: 1
-                color: "#e2e8f0"
+                color: Theme.border
             }
         }
 
@@ -89,7 +91,7 @@ Dialog {
             Text {
                 text: "请确保手机与电脑连接在同一个 WiFi 局域网下"
                 font.pixelSize: 13
-                color: "#64748b"
+                color: Theme.secondary
                 Layout.alignment: Qt.AlignHCenter
             }
 
@@ -97,8 +99,8 @@ Dialog {
             Rectangle {
                 Layout.preferredWidth: 230
                 Layout.preferredHeight: 230
-                color: "#ffffff"
-                border.color: "#e2e8f0"
+                color: Theme.paper
+                border.color: Theme.border
                 radius: 12
                 Layout.alignment: Qt.AlignHCenter
 
@@ -120,7 +122,7 @@ Dialog {
                 Text {
                     text: "局域网 IP:"
                     font.pixelSize: 12
-                    color: "#475569"
+                    color: Theme.secondary
                 }
 
                 ComboBox {
@@ -138,8 +140,8 @@ Dialog {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 40
-                color: "#f8fafc"
-                border.color: "#e2e8f0"
+                color: Theme.background
+                border.color: Theme.border
                 radius: 8
 
                 RowLayout {
@@ -151,7 +153,7 @@ Dialog {
                     Text {
                         text: root.appController.lanUploadService.uploadUrl
                         font.pixelSize: 11
-                        color: "#2563eb"
+                        color: Theme.accent
                         Layout.fillWidth: true
                         elide: Text.ElideRight
                     }
@@ -160,15 +162,15 @@ Dialog {
                         id: copyUploadUrlButton
                         Layout.preferredHeight: 28
                         background: Rectangle {
-                            color: copyUploadUrlButton.hovered ? "#dbeafe" : "#eff6ff"
-                            border.color: "#bfdbfe"
+                            color: copyUploadUrlButton.hovered ? Theme.accentSoft : Theme.accentSoft
+                            border.color: Theme.accentBorder
                             radius: 6
                         }
                         contentItem: Text {
                             text: "复制链接"
                             font.pixelSize: 11
                             font.bold: true
-                            color: "#1d4ed8"
+                            color: Theme.accentHover
                             anchors.centerIn: parent
                         }
                         onClicked: {
@@ -180,14 +182,14 @@ Dialog {
                         id: refreshUploadTokenButton
                         Layout.preferredHeight: 28
                         background: Rectangle {
-                            color: refreshUploadTokenButton.hovered ? "#e2e8f0" : "#f1f5f9"
-                            border.color: "#cbd5e1"
+                            color: refreshUploadTokenButton.hovered ? Theme.border : Theme.surface
+                            border.color: Theme.border
                             radius: 6
                         }
                         contentItem: Text {
                             text: "刷新"
                             font.pixelSize: 11
-                            color: "#334155"
+                            color: Theme.secondary
                             anchors.centerIn: parent
                         }
                         onClicked: root.appController.lanUploadService.refreshSessionToken()
@@ -199,8 +201,8 @@ Dialog {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 56
-                color: root.appController.lanUploadService.receivedImageCount > 0 ? "#f0fdf4" : "#f8fafc"
-                border.color: root.appController.lanUploadService.receivedImageCount > 0 ? "#bbf7d0" : "#e2e8f0"
+                color: root.appController.lanUploadService.receivedImageCount > 0 ? Theme.accentSoft : Theme.background
+                border.color: root.appController.lanUploadService.receivedImageCount > 0 ? "#bbf7d0" : Theme.border
                 radius: 8
 
                 RowLayout {
@@ -208,9 +210,9 @@ Dialog {
                     anchors.margins: 12
                     spacing: 12
 
-                    Text {
-                        text: root.appController.lanUploadService.receivedImageCount > 0 ? "✅" : "📱"
-                        font.pixelSize: 20
+                    Icon {
+                        name: root.appController.lanUploadService.receivedImageCount > 0 ? "check" : "phone"
+                        size: 20
                     }
 
                     Column {
@@ -222,12 +224,12 @@ Dialog {
                                   : "手机扫码后可直接拍照或在相册中多选批量上传"
                             font.bold: root.appController.lanUploadService.receivedImageCount > 0
                             font.pixelSize: 12
-                            color: root.appController.lanUploadService.receivedImageCount > 0 ? "#15803d" : "#334155"
+                            color: root.appController.lanUploadService.receivedImageCount > 0 ? "#15803d" : Theme.secondary
                         }
                         Text {
                             text: "单次任务最多支持 10 张手写文章图片"
                             font.pixelSize: 11
-                            color: "#64748b"
+                            color: Theme.secondary
                         }
                     }
                 }
@@ -238,7 +240,7 @@ Dialog {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 52
-            color: "#ffffff"
+            color: Theme.paper
             radius: 16
 
             Rectangle {
@@ -246,7 +248,7 @@ Dialog {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 height: 1
-                color: "#e2e8f0"
+                color: Theme.border
             }
 
             Button {
@@ -258,13 +260,13 @@ Dialog {
                 height: 34
                 width: 80
                 background: Rectangle {
-                    color: closeQrFooterButton.hovered ? "#e2e8f0" : "#f1f5f9"
-                    border.color: "#cbd5e1"
+                    color: closeQrFooterButton.hovered ? Theme.border : Theme.surface
+                    border.color: Theme.border
                     radius: 6
                 }
                 contentItem: Text {
                     text: "关闭"
-                    color: "#334155"
+                    color: Theme.secondary
                     font.bold: true
                     font.pixelSize: 12
                     anchors.centerIn: parent

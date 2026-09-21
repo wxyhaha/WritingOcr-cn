@@ -1,4 +1,6 @@
 import QtQuick
+import "../components"
+import "../components/Theme.js" as Theme
 import QtQuick.Controls
 import QtQuick.Layouts
 
@@ -18,9 +20,9 @@ Dialog {
     signal confirmed(string taskId)
 
     background: Rectangle {
-        color: "#ffffff"
+        color: Theme.paper
         radius: 16
-        border.color: "#e2e8f0"
+        border.color: Theme.border
 
         Rectangle {
             anchors.fill: parent
@@ -40,7 +42,7 @@ Dialog {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 54
-            color: "#ffffff"
+            color: Theme.paper
             radius: 16
 
             RowLayout {
@@ -58,9 +60,9 @@ Dialog {
                         radius: 14
                         color: "#fee2e2"
                         anchors.verticalCenter: parent.verticalCenter
-                        Text {
-                            text: "🗑️"
-                            font.pixelSize: 14
+                        Icon {
+                            name: "trash"
+                            size: 18
                             anchors.centerIn: parent
                         }
                     }
@@ -81,10 +83,10 @@ Dialog {
                     Layout.preferredWidth: 30
                     Layout.preferredHeight: 30
                     background: Rectangle {
-                        color: closeConfirmButton.hovered ? "#f1f5f9" : "transparent"
+                        color: closeConfirmButton.hovered ? Theme.surface : "transparent"
                         radius: 15
                     }
-                    contentItem: Text { text: "✕"; color: "#64748b"; font.pixelSize: 13; anchors.centerIn: parent }
+                    contentItem: Icon { name: "close"; color: Theme.secondary; size: 18; anchors.centerIn: parent }
                     onClicked: root.close()
                 }
             }
@@ -109,7 +111,7 @@ Dialog {
                 text: `确定要删除任务「${root.targetTaskTitle}」吗？`
                 font.bold: true
                 font.pixelSize: 14
-                color: "#0f172a"
+                color: Theme.ink
                 wrapMode: Text.Wrap
                 Layout.fillWidth: true
             }
@@ -141,7 +143,7 @@ Dialog {
             }
 
             Text {
-                text: "⚠️ 此操作不可撤销，请谨慎操作。"
+                text: "此操作不可撤销，请谨慎操作。"
                 font.pixelSize: 11
                 color: "#e11d48"
             }
@@ -151,7 +153,7 @@ Dialog {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 56
-            color: "#ffffff"
+            color: Theme.paper
             radius: 16
 
             Rectangle {
@@ -159,7 +161,7 @@ Dialog {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 height: 1
-                color: "#e2e8f0"
+                color: Theme.border
             }
 
             Row {
@@ -173,13 +175,13 @@ Dialog {
                     height: 36
                     width: 80
                     background: Rectangle {
-                        color: cancelConfirmButton.hovered ? "#e2e8f0" : "#f1f5f9"
-                        border.color: "#cbd5e1"
+                        color: cancelConfirmButton.hovered ? Theme.border : Theme.surface
+                        border.color: Theme.border
                         radius: 6
                     }
                     contentItem: Text {
                         text: "取消"
-                        color: "#475569"
+                        color: Theme.secondary
                         font.pixelSize: 12
                         font.bold: true
                         anchors.centerIn: parent
@@ -198,7 +200,7 @@ Dialog {
                     contentItem: Row {
                         anchors.centerIn: parent
                         spacing: 4
-                        Text { text: "🗑️"; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+                        Icon { name: "trash"; color: Theme.paper; size: 18; anchors.verticalCenter: parent.verticalCenter }
                         Text { text: "永久删除"; color: "white"; font.bold: true; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
                     }
                     onClicked: {

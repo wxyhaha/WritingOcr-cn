@@ -91,8 +91,37 @@ target_link_libraries(HandwritingOCR PRIVATE
     Qt6::Concurrent
 )
 
+# Keep QML runtime modules (including persisted workspace settings) and SVG
+# image plugins beside the executable when building on Windows.
+if(WIN32)
+    get_target_property(QT_QMAKE_EXECUTABLE Qt6::qmake IMPORTED_LOCATION)
+    get_filename_component(QT_BIN_DIRECTORY "${QT_QMAKE_EXECUTABLE}" DIRECTORY)
+    find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${QT_BIN_DIRECTORY}")
+    if(WINDEPLOYQT_EXECUTABLE)
+        add_custom_command(TARGET HandwritingOCR POST_BUILD
+            COMMAND "${WINDEPLOYQT_EXECUTABLE}" --no-translations --verbose 0
+                --qmldir "${CMAKE_CURRENT_SOURCE_DIR}/app/qml"
+                "$<TARGET_FILE:HandwritingOCR>"
+            COMMENT "Deploying Qt Quick modules and SVG support"
+            VERBATIM
+        )
+    endif()
+endif()
+
 # Test executables
 enable_testing()
+
+if(WIN32)
+    find_program(QMLTESTRUNNER_EXECUTABLE qmltestrunner HINTS "${QT_BIN_DIRECTORY}")
+    if(QMLTESTRUNNER_EXECUTABLE)
+        add_test(NAME test_ui
+            COMMAND "${QMLTESTRUNNER_EXECUTABLE}" -platform offscreen
+                -input "${CMAKE_CURRENT_SOURCE_DIR}/tests/tst_ui.qml")
+        set_tests_properties(test_ui PROPERTIES
+            ENVIRONMENT "QT_QUICK_CONTROLS_STYLE=Basic"
+            TIMEOUT 30)
+    endif()
+endif()
 
 add_executable(test_storage_db
     tests/test_storage_db.cpp

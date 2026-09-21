@@ -2,543 +2,210 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs 6.5
+import "../components"
+import "../components/Theme.js" as Theme
 
 pragma ComponentBehavior: Bound
 
 Item {
     id: root
-
     property var appController
-
     signal openTaskRequested(string taskId)
     signal scanQrRequested()
     signal exportTaskRequested(string taskId)
     signal deleteTaskRequested(string taskId, string taskTitle, int pageCount)
+    readonly property bool hasTasks: appController.taskListModel.count > 0
 
     FileDialog {
         id: fileDialog
-        title: "选择手写文章图片 (单任务支持 1~10 张)"
+        title: "选择手稿图片（最多 10 页）"
         fileMode: FileDialog.OpenFiles
         nameFilters: ["图片文件 (*.jpg *.jpeg *.png *.webp *.bmp)"]
-        onAccepted: {
-            root.appController.importFiles(selectedFiles);
-        }
+        onAccepted: root.appController.importFiles(selectedFiles)
     }
 
     ScrollView {
-        id: scrollView
         anchors.fill: parent
         clip: true
-
+        contentWidth: availableWidth
         Column {
-            id: mainColumn
             width: Math.min(root.width - 64, 1180)
             anchors.horizontalCenter: parent.horizontalCenter
-            topPadding: 32
-            bottomPadding: 64
-            spacing: 28
+            topPadding: 36
+            bottomPadding: 40
+            spacing: 24
 
-            // 1. Top Quick Upload Banner (居中、精致高雅的导入操作栏)
-            Rectangle {
-                id: bannerCard
+            RowLayout {
                 width: parent.width
-                height: 104
-                radius: 16
-                color: dropArea.containsDrag ? "#f0fdf4" : "#ffffff"
-                border.width: dropArea.containsDrag ? 2 : 1
-                border.color: dropArea.containsDrag ? "#22c55e" : "#e2e8f0"
-
-                // Subtle card shadow
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: -1
-                    color: "transparent"
-                    border.color: "#0f172a0a"
-                    radius: 17
-                    z: -1
+                Column {
+                    spacing: 6
+                    Text { text: "我的手稿"; font.pixelSize: 28; font.bold: true; color: Theme.ink }
+                    Text {
+                        text: root.hasTasks ? root.appController.taskListModel.count + " 篇手稿，保存在这台电脑上" : "从一页手写开始，整理你的文字"
+                        font.pixelSize: 13; color: Theme.secondary
+                    }
                 }
+                Item { Layout.fillWidth: true }
+                ActionButton { text: "手机上传"; iconName: "phone"; onClicked: root.scanQrRequested() }
+                ActionButton {
+                    text: "新建手稿"; quiet: true
+                    onClicked: {
+                        let tid = root.appController.taskService.createNewTask();
+                        if (tid) root.openTaskRequested(tid);
+                    }
+                }
+                ActionButton { text: "导入手稿"; iconName: "plus"; primary: true; onClicked: fileDialog.open() }
+            }
 
+            Rectangle {
+                width: parent.width
+                height: root.hasTasks ? 76 : 180
+                radius: 12
+                color: dropArea.containsDrag ? Theme.accentSoft : Theme.paper
+                border.color: dropArea.containsDrag ? Theme.accent : Theme.border
+                border.width: dropArea.containsDrag ? 2 : 1
                 DropArea {
                     id: dropArea
                     anchors.fill: parent
                     onDropped: (drop) => {
-                        if (drop.hasUrls) {
-                            root.appController.importFiles(drop.urls);
-                        }
+                        if (drop.hasUrls) root.appController.importFiles(drop.urls);
                     }
                 }
-
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 24
-                    anchors.rightMargin: 24
-                    spacing: 20
-
-                    // Banner Icon & Centered Typography
-                    Row {
-                        spacing: 16
-                        Layout.alignment: Qt.AlignVCenter
-
-                        Rectangle {
-                            width: 54
-                            height: 54
-                            radius: 14
-                            color: dropArea.containsDrag ? "#dcfce7" : "#eff6ff"
-                            border.color: dropArea.containsDrag ? "#86efac" : "#bfdbfe"
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Text {
-                                text: dropArea.containsDrag ? "📥" : "📝"
-                                font.pixelSize: 26
-                                anchors.centerIn: parent
-                            }
-                        }
-
-                        Column {
-                            spacing: 4
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Text {
-                                text: dropArea.containsDrag ? "松开鼠标立即导入并识别" : "拖拽手写文章图片到这里开始"
-                                font.bold: true
-                                font.pixelSize: 16
-                                color: "#0f172a"
-                            }
-
-                            Text {
-                                text: "支持 JPG / PNG / WEBP · 单任务支持 1~10 张连续手写页"
-                                font.pixelSize: 12
-                                color: "#64748b"
-                            }
-                        }
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    // Action Buttons Trio
-                    Row {
-                        spacing: 12
-                        Layout.alignment: Qt.AlignVCenter
-
-                        // Primary Action: Choose from computer
-                        Button {
-                            id: importButton
-                            height: 40
-                            background: Rectangle {
-                                color: importButton.hovered ? "#1d4ed8" : "#2563eb"
-                                radius: 8
-                                Behavior on color { ColorAnimation { duration: 150 } }
-                            }
-                            contentItem: Row {
-                                anchors.centerIn: parent
-                                spacing: 6
-                                Text { text: "📁"; font.pixelSize: 14; anchors.verticalCenter: parent.verticalCenter }
-                                Text { text: "导入图片识别"; color: "white"; font.bold: true; font.pixelSize: 13; anchors.verticalCenter: parent.verticalCenter }
-                            }
-                            onClicked: fileDialog.open()
-                        }
-
-                        // Mobile scan upload
-                        Button {
-                            id: scanButton
-                            height: 40
-                            background: Rectangle {
-                                color: scanButton.hovered ? "#dcfce7" : "#ecfdf5"
-                                border.color: scanButton.hovered ? "#86efac" : "#a7f3d0"
-                                radius: 8
-                                Behavior on color { ColorAnimation { duration: 150 } }
-                            }
-                            contentItem: Row {
-                                anchors.centerIn: parent
-                                spacing: 6
-                                Text { text: "📱"; font.pixelSize: 13; anchors.verticalCenter: parent.verticalCenter }
-                                Text { text: "手机扫码"; color: "#047857"; font.bold: true; font.pixelSize: 13; anchors.verticalCenter: parent.verticalCenter }
-                            }
-                            onClicked: root.scanQrRequested()
-                        }
-
-                        // New blank task
-                        Button {
-                            id: newTaskButton
-                            height: 40
-                            background: Rectangle {
-                                color: newTaskButton.hovered ? "#f1f5f9" : "#ffffff"
-                                border.color: newTaskButton.hovered ? "#94a3b8" : "#cbd5e1"
-                                radius: 8
-                                Behavior on color { ColorAnimation { duration: 150 } }
-                            }
-                            contentItem: Row {
-                                anchors.centerIn: parent
-                                spacing: 5
-                                Text { text: "➕"; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
-                                Text { text: "新建空白"; color: "#334155"; font.bold: true; font.pixelSize: 13; anchors.verticalCenter: parent.verticalCenter }
-                            }
-                            onClicked: {
-                                let tid = root.appController.taskService.createNewTask();
-                                if (tid) root.openTaskRequested(tid);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 2. Section Header with Page Margins
-            RowLayout {
-                width: parent.width
-                visible: root.appController.taskListModel.count > 0
-
                 Row {
-                    spacing: 10
-                    Layout.alignment: Qt.AlignVCenter
-
-                    Text {
-                        text: "我的手写文章"
-                        font.bold: true
-                        font.pixelSize: 17
-                        color: "#0f172a"
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Rectangle {
-                        height: 22
-                        radius: 11
-                        color: "#eff6ff"
-                        border.color: "#bfdbfe"
-                        width: countLabel.implicitWidth + 16
-                        anchors.verticalCenter: parent.verticalCenter
-
+                    anchors.centerIn: parent
+                    spacing: 18
+                    Icon { name: "upload"; size: 28; color: Theme.accent; anchors.verticalCenter: parent.verticalCenter }
+                    Column {
+                        spacing: 7
                         Text {
-                            id: countLabel
-                            text: `${root.appController.taskListModel.count} 篇`
-                            font.pixelSize: 11
-                            font.bold: true
-                            color: "#1d4ed8"
-                            anchors.centerIn: parent
+                            text: dropArea.containsDrag ? "松开即可导入" : "将手稿照片拖到这里"
+                            font.pixelSize: root.hasTasks ? 14 : 18
+                            font.bold: !root.hasTasks
+                            color: Theme.ink
                         }
+                        Text { text: "JPG / PNG / WEBP / BMP  ·  每篇最多 10 页"; font.pixelSize: 12; color: Theme.muted }
                     }
                 }
-
-                Item { Layout.fillWidth: true }
             }
 
-            // 3. Document Cards Grid (方案 A：带有优雅内边距的图文卡片流)
             Flow {
                 id: cardGrid
                 width: parent.width
                 spacing: 20
-                visible: root.appController.taskListModel.count > 0
-
                 Repeater {
                     model: root.appController.taskListModel
-
                     delegate: Rectangle {
                         id: taskCard
                         required property var model
                         required property int index
-                        width: 270
-                        height: 310
-                        radius: 16
-                        color: "#ffffff"
-                        border.width: cardMouseArea.containsMouse ? 1.5 : 1
-                        border.color: cardMouseArea.containsMouse ? "#3b82f6" : "#e2e8f0"
+                        readonly property int columns: Math.max(1, Math.floor((cardGrid.width + 20) / 260))
+                        width: (cardGrid.width - (columns - 1) * 20) / columns
+                        height: 328
+                        radius: 10
+                        color: Theme.paper
+                        border.color: openButton.hovered || openButton.visualFocus ? Theme.accentBorder : Theme.border
+                        Behavior on border.color { ColorAnimation { duration: 120 } }
 
-                        Behavior on border.color { ColorAnimation { duration: 150 } }
-
-                        // Card elevation drop-shadow
-                        Rectangle {
-                            anchors.fill: parent
-                            anchors.margins: -1
-                            color: "transparent"
-                            border.color: cardMouseArea.containsMouse ? "#2563eb1f" : "#0f172a08"
-                            radius: 17
-                            z: -1
-                        }
-
-                        MouseArea {
-                            id: cardMouseArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                root.appController.taskService.loadTask(taskCard.model.id);
-                                root.openTaskRequested(taskCard.model.id);
-                            }
-                        }
-
-                        // Top Framed Thumbnail Image (优雅的相框式缩略图预览)
-                        Rectangle {
-                            id: thumbFrame
-                            anchors.top: parent.top
+                        Button {
+                            id: openButton
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            anchors.margins: 10
-                            height: 156
-                            radius: 10
-                            color: "#f1f5f9"
-                            clip: true
-
-                            // Fallback pattern when no image loaded
-                            Column {
-                                anchors.centerIn: parent
-                                visible: coverImg.status === Image.Null || coverImg.status === Image.Error || coverImg.source == ""
-                                spacing: 6
-
-                                Text {
-                                    text: "📄"
-                                    font.pixelSize: 32
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                }
-                                Text {
-                                    text: "手写文章"
-                                    font.pixelSize: 11
-                                    color: "#94a3b8"
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                }
-                            }
-
-                            // Real Handwritten Document Thumbnail
-                            Image {
-                                id: coverImg
-                                anchors.fill: parent
-                                source: (taskCard.model.coverThumbnail && taskCard.model.coverThumbnail !== "")
-                                        ? root.appController.localFileToUrl(taskCard.model.coverThumbnail)
-                                        : ((taskCard.model.coverImage && taskCard.model.coverImage !== "") ? root.appController.localFileToUrl(taskCard.model.coverImage) : "")
-                                fillMode: Image.PreserveAspectCrop
-                                asynchronous: true
-                                smooth: true
-                                mipmap: true
-                                scale: cardMouseArea.containsMouse ? 1.05 : 1.0
-                                Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
-                            }
-
-                            // Top-Left Page Count Badge
-                            Rectangle {
-                                anchors.left: parent.left
-                                anchors.top: parent.top
-                                anchors.margins: 8
-                                height: 22
-                                radius: 6
-                                color: "#d90f172a"
-                                width: pageBadgeText.implicitWidth + 12
-
-                                Text {
-                                    id: pageBadgeText
-                                    anchors.centerIn: parent
-                                    text: `📄 ${taskCard.model.pageCount} 页`
-                                    font.pixelSize: 11
-                                    font.bold: true
-                                    color: "#ffffff"
-                                }
-                            }
-
-                            // Top-Right Low Confidence Warning Badge
-                            Rectangle {
-                                visible: taskCard.model.lowConfidenceCount > 0
-                                anchors.right: parent.right
-                                anchors.top: parent.top
-                                anchors.margins: 8
-                                height: 22
-                                radius: 6
-                                color: "#f59e0b"
-                                width: lowConfBadgeText.implicitWidth + 12
-
-                                Text {
-                                    id: lowConfBadgeText
-                                    anchors.centerIn: parent
-                                    text: `⚠️ ${taskCard.model.lowConfidenceCount}`
-                                    font.pixelSize: 11
-                                    font.bold: true
-                                    color: "#ffffff"
-                                }
-                            }
-
-                            // Hover CTA Overlay
-                            Rectangle {
-                                anchors.fill: parent
-                                color: "#500f172a"
-                                opacity: cardMouseArea.containsMouse ? 1.0 : 0.0
-                                visible: opacity > 0
-                                Behavior on opacity { NumberAnimation { duration: 180 } }
-
+                            anchors.top: parent.top
+                            height: 274
+                            padding: 0
+                            Accessible.name: "打开手稿：" + taskCard.model.title
+                            background: Item {}
+                            contentItem: Item {
                                 Rectangle {
-                                    anchors.centerIn: parent
-                                    height: 34
-                                    radius: 17
-                                    color: "#2563eb"
-                                    width: enterText.implicitWidth + 24
-
-                                    Row {
+                                    id: preview
+                                    anchors.top: parent.top
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.margins: 12
+                                    height: 180
+                                    radius: 6
+                                    color: Theme.surface
+                                    clip: true
+                                    Icon {
                                         anchors.centerIn: parent
-                                        spacing: 4
-                                        Text {
-                                            id: enterText
-                                            text: "进入校对"
-                                            color: "white"
-                                            font.bold: true
-                                            font.pixelSize: 12
-                                        }
-                                        Text {
-                                            text: "→"
-                                            color: "white"
-                                            font.bold: true
-                                            font.pixelSize: 12
-                                        }
+                                        size: 36
+                                        name: "document"
+                                        color: Theme.muted
+                                        visible: cover.status !== Image.Ready
+                                    }
+                                    Image {
+                                        id: cover
+                                        anchors.fill: parent
+                                        anchors.margins: 10
+                                        source: taskCard.model.coverThumbnail
+                                            ? root.appController.localFileToUrl(taskCard.model.coverThumbnail)
+                                            : (taskCard.model.coverImage ? root.appController.localFileToUrl(taskCard.model.coverImage) : "")
+                                        fillMode: Image.PreserveAspectFit
+                                        asynchronous: true
+                                        mipmap: true
                                     }
                                 }
+                                Text {
+                                    anchors.top: preview.bottom
+                                    anchors.topMargin: 16
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.leftMargin: 16
+                                    anchors.rightMargin: 16
+                                    text: taskCard.model.title
+                                    font.pixelSize: 16
+                                    font.bold: true
+                                    color: Theme.ink
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 16
+                                    anchors.top: preview.bottom
+                                    anchors.topMargin: 43
+                                    text: taskCard.model.pageCount + " 页  ·  " + taskCard.model.totalCharacters + " 字  ·  "
+                                        + taskCard.model.updatedAt.substring(5, 10)
+                                    font.pixelSize: 12
+                                    color: Theme.muted
+                                }
+                            }
+                            onClicked: {
+                                if (root.appController.taskService.loadTask(taskCard.model.id))
+                                    root.openTaskRequested(taskCard.model.id);
                             }
                         }
-
-                        // Bottom Info & Actions with Generous Inner Padding
-                        Item {
-                            anchors.top: thumbFrame.bottom
+                        RowLayout {
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.bottom: parent.bottom
-                            anchors.leftMargin: 14
-                            anchors.rightMargin: 14
-                            anchors.topMargin: 8
-                            anchors.bottomMargin: 12
-
-                            Column {
-                                anchors.top: parent.top
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                spacing: 6
-
-                                // Task Title
-                                Text {
-                                    width: parent.width
-                                    text: taskCard.model.title
-                                    font.bold: true
-                                    font.pixelSize: 14
-                                    color: "#0f172a"
-                                    elide: Text.ElideRight
-                                    maximumLineCount: 1
-                                }
-
-                                // Metadata row
-                                Row {
-                                    spacing: 8
-                                    width: parent.width
-
-                                    // Word count pill
-                                    Rectangle {
-                                        height: 20
-                                        radius: 4
-                                        color: "#f1f5f9"
-                                        width: wordBadgeText.implicitWidth + 10
-
-                                        Text {
-                                            id: wordBadgeText
-                                            text: `✍️ ${taskCard.model.totalCharacters} 字`
-                                            font.pixelSize: 11
-                                            color: "#475569"
-                                            anchors.centerIn: parent
-                                        }
-                                    }
-
-                                    // Date
-                                    Text {
-                                        text: `${taskCard.model.updatedAt.substring(5, 16).replace('T', ' ')}`
-                                        font.pixelSize: 11
-                                        color: "#94a3b8"
-                                        anchors.verticalCenter: parent.verticalCenter
-                                    }
-                                }
+                            anchors.margins: 12
+                            spacing: 4
+                            Text {
+                                Layout.fillWidth: true
+                                text: taskCard.model.lowConfidenceCount > 0 ? taskCard.model.lowConfidenceCount + " 处待核对" : "手稿"
+                                color: taskCard.model.lowConfidenceCount > 0 ? Theme.warning : Theme.muted
+                                font.pixelSize: 12
                             }
-
-                            // Card Bottom Action Buttons
-                            RowLayout {
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.bottom: parent.bottom
-                                spacing: 8
-
-                                Button {
-                                    id: exportTaskButton
-                                    Layout.preferredHeight: 30
-                                    Layout.fillWidth: true
-                                    background: Rectangle {
-                                        color: exportTaskButton.hovered ? "#eff6ff" : "#f8fafc"
-                                        border.color: exportTaskButton.hovered ? "#bfdbfe" : "#e2e8f0"
-                                        radius: 6
-                                    }
-                                    contentItem: Row {
-                                        anchors.centerIn: parent
-                                        spacing: 4
-                                        Text { text: "📥"; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
-                                        Text { text: "导出"; font.pixelSize: 11; font.bold: true; color: "#334155"; anchors.verticalCenter: parent.verticalCenter }
-                                    }
-                                    onClicked: root.exportTaskRequested(taskCard.model.id)
-                                }
-
-                                Button {
-                                    id: deleteTaskButton
-                                    Layout.preferredHeight: 30
-                                    Layout.preferredWidth: 34
-                                    background: Rectangle {
-                                        color: deleteTaskButton.hovered ? "#fee2e2" : "#f8fafc"
-                                        border.color: deleteTaskButton.hovered ? "#fca5a5" : "#e2e8f0"
-                                        radius: 6
-                                    }
-                                    contentItem: Text {
-                                        text: "🗑️"
-                                        font.pixelSize: 11
-                                        anchors.centerIn: parent
-                                    }
-                                    onClicked: root.deleteTaskRequested(taskCard.model.id, taskCard.model.title, taskCard.model.pageCount)
-                                    ToolTip.visible: hovered
-                                    ToolTip.text: "删除任务"
-                                    ToolTip.delay: 300
-                                }
+                            ActionButton {
+                                iconName: "download"; quiet: true
+                                ToolTip.text: "导出手稿"
+                                onClicked: root.exportTaskRequested(taskCard.model.id)
+                            }
+                            ActionButton {
+                                iconName: "trash"; quiet: true
+                                ToolTip.text: "删除手稿"
+                                onClicked: root.deleteTaskRequested(taskCard.model.id, taskCard.model.title, taskCard.model.pageCount)
                             }
                         }
                     }
                 }
             }
-
-            // Empty State Card (when no tasks)
-            Rectangle {
-                visible: root.appController.taskListModel.count === 0
-                width: parent.width
-                height: 220
-                color: "#ffffff"
-                radius: 16
-                border.color: "#e2e8f0"
-
-                Column {
-                    anchors.centerIn: parent
-                    spacing: 12
-
-                    Rectangle {
-                        width: 56
-                        height: 56
-                        radius: 28
-                        color: "#f8fafc"
-                        border.color: "#e2e8f0"
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        Text {
-                            text: "📂"
-                            font.pixelSize: 26
-                            anchors.centerIn: parent
-                        }
-                    }
-
-                    Text {
-                        text: "暂无历史任务"
-                        font.bold: true
-                        font.pixelSize: 15
-                        color: "#1e293b"
-                        anchors.horizontalCenter: parent.horizontalCenter
-                    }
-
-                    Text {
-                        text: "点击上方【导入图片识别】或直接拖拽图片开始数字化"
-                        font.pixelSize: 13
-                        color: "#64748b"
-                        anchors.horizontalCenter: parent.horizontalCenter
-                    }
-                }
+            Text {
+                visible: !root.hasTasks
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "导入照片，识别文字，再对照原稿慢慢校订。"
+                font.pixelSize: 14
+                color: Theme.muted
             }
         }
     }

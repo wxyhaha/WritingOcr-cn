@@ -1,4 +1,5 @@
 import QtQuick
+import "Theme.js" as Theme
 import QtQuick.Controls
 
 pragma ComponentBehavior: Bound
@@ -14,10 +15,10 @@ Item {
 
     signal blockClicked(int index, var block)
 
-    // Dark Slate canvas background
+    // Neutral canvas keeps the original photograph's colors unchanged.
     Rectangle {
         anchors.fill: parent
-        color: "#0f172a"
+        color: "#E4E6DF"
     }
 
     Flickable {
@@ -67,25 +68,6 @@ Item {
                     }
                 }
 
-                Column {
-                    anchors.centerIn: parent
-                    spacing: 8
-                    visible: !root.imagePath || imageItem.status === Image.Error
-                    Text {
-                        text: root.imagePath ? "图片加载失败" : "请选择一个页面"
-                        color: "#e2e8f0"
-                        font.bold: true
-                        font.pixelSize: 15
-                        anchors.horizontalCenter: parent.horizontalCenter
-                    }
-                    Text {
-                        text: root.imagePath ? "请检查文件是否存在，或重新导入图片" : "从左侧页面列表选择要查看的图片"
-                        color: "#94a3b8"
-                        font.pixelSize: 12
-                        anchors.horizontalCenter: parent.horizontalCenter
-                    }
-                }
-
                 // Overlay for OCR Bounding Boxes
                 Item {
                     id: overlayLayer
@@ -123,8 +105,8 @@ Item {
 
                             // Visual styling: Distinct & clean default state, bold highlight when selected
                             border.width: isSel ? 2.5 : (isLow ? 2.0 : (isPrinted ? 1.2 : 1.5))
-                            border.color: isSel ? "#2563eb" : (isLow ? "#d97706" : (isPrinted ? "#64748b" : "#0284c7"))
-                            color: isSel ? "#402563eb" : (isLow ? "#25d97706" : (isPrinted ? "#1564748b" : "#140284c7"))
+                            border.color: isSel ? Theme.accent : (isLow ? Theme.warning : (isPrinted ? Theme.secondary : Theme.accentBorder))
+                            color: isSel ? "#40365C49" : (isLow ? "#25976522" : (isPrinted ? "#15566259" : "#14365C49"))
                             radius: 3
 
                             visible: true
@@ -135,7 +117,7 @@ Item {
                                 anchors.margins: -3
                                 radius: 5
                                 color: "transparent"
-                                border.color: "#2563eb"
+                                border.color: Theme.accent
                                 border.width: 2.0
                                 visible: boxRect.isSel
                                 opacity: 0.9
@@ -249,31 +231,55 @@ Item {
         }
     }
 
-    // Modern Floating Glassmorphic Zoom & Rotate HUD
+    Column {
+        anchors.centerIn: parent
+        width: Math.max(0, root.width - 32)
+        spacing: 8
+        visible: !root.imagePath || imageItem.status === Image.Error
+        Text {
+            text: root.imagePath ? "图片加载失败" : "请选择一个页面"
+            color: Theme.secondary
+            font.bold: true
+            font.pixelSize: 15
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+        }
+        Text {
+            text: root.imagePath ? "请检查文件是否存在，或重新导入图片" : "从左侧页面列表选择要查看的图片"
+            color: Theme.muted
+            font.pixelSize: 12
+            width: parent.width
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+        }
+    }
+
+    // Compact image tools
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 20
         height: 38
         radius: 19
-        color: "#d91e293b" // Translucent dark slate
-        border.color: "#334155"
+        color: "#EB283D32"
+        border.color: Theme.secondary
         width: controlsRow.implicitWidth + 24
 
         Row {
             id: controlsRow
             anchors.centerIn: parent
-            spacing: 10
+            spacing: root.width < 360 ? 4 : 8
 
             Button {
                 id: zoomOutButton
                 width: 26
                 height: 26
                 background: Rectangle {
-                    color: zoomOutButton.hovered ? "#334155" : "transparent"
+                    color: zoomOutButton.hovered ? Theme.secondary : "transparent"
                     radius: 13
                 }
-                contentItem: Text { text: "−"; color: "white"; font.bold: true; font.pixelSize: 15; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Icon { name: "minus"; color: "white";  size: 18;  }
                 onClicked: root.zoom(0.8)
                 ToolTip.visible: hovered
                 ToolTip.text: "缩小"
@@ -282,7 +288,7 @@ Item {
 
             Text {
                 text: `${Math.round(root.currentScale * 100)}%`
-                color: "#e2e8f0"
+                color: Theme.border
                 font.pixelSize: 12
                 font.bold: true
                 anchors.verticalCenter: parent.verticalCenter
@@ -293,41 +299,42 @@ Item {
                 width: 26
                 height: 26
                 background: Rectangle {
-                    color: zoomInButton.hovered ? "#334155" : "transparent"
+                    color: zoomInButton.hovered ? Theme.secondary : "transparent"
                     radius: 13
                 }
-                contentItem: Text { text: "+"; color: "white"; font.bold: true; font.pixelSize: 15; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Icon { name: "plus"; color: "white";  size: 18;  }
                 onClicked: root.zoom(1.25)
                 ToolTip.visible: hovered
                 ToolTip.text: "放大"
                 ToolTip.delay: 300
             }
 
-            Rectangle { width: 1; height: 16; color: "#475569"; anchors.verticalCenter: parent.verticalCenter }
+            Rectangle { width: 1; height: 16; color: Theme.secondary; anchors.verticalCenter: parent.verticalCenter }
 
             Button {
                 id: fitButton
                 height: 26
                 background: Rectangle {
-                    color: fitButton.hovered ? "#334155" : "transparent"
+                    color: fitButton.hovered ? Theme.secondary : "transparent"
                     radius: 6
                 }
-                contentItem: Text { text: "适应窗口"; color: "#93c5fd"; font.pixelSize: 11; anchors.centerIn: parent }
+                contentItem: Text { text: "适应"; color: Theme.accentBorder; font.pixelSize: 11; anchors.centerIn: parent }
                 onClicked: root.fitToWindow()
             }
 
             Button {
                 id: originalSizeButton
+                visible: root.width >= 360
                 height: 26
                 background: Rectangle {
-                    color: originalSizeButton.hovered ? "#334155" : "transparent"
+                    color: originalSizeButton.hovered ? Theme.secondary : "transparent"
                     radius: 6
                 }
-                contentItem: Text { text: "1:1 原图"; color: "#93c5fd"; font.pixelSize: 11; anchors.centerIn: parent }
+                contentItem: Text { text: "1:1"; color: Theme.accentBorder; font.pixelSize: 11; anchors.centerIn: parent }
                 onClicked: root.resetOriginalSize()
             }
 
-            Rectangle { width: 1; height: 16; color: "#475569"; anchors.verticalCenter: parent.verticalCenter }
+            Rectangle { width: 1; height: 16; color: Theme.secondary; anchors.verticalCenter: parent.verticalCenter }
 
             // Rotate buttons
             Button {
@@ -335,10 +342,10 @@ Item {
                 width: 26
                 height: 26
                 background: Rectangle {
-                    color: rotateLeftButton.hovered ? "#334155" : "transparent"
+                    color: rotateLeftButton.hovered ? Theme.secondary : "transparent"
                     radius: 13
                 }
-                contentItem: Text { text: "⟲"; color: "#93c5fd"; font.bold: true; font.pixelSize: 14; anchors.centerIn: parent }
+                contentItem: Icon { name: "rotateLeft"; color: Theme.accentBorder;  size: 18; anchors.centerIn: parent }
                 onClicked: root.rotateImage(-90)
                 ToolTip.visible: hovered
                 ToolTip.text: "逆时针旋转 90°"
@@ -350,10 +357,10 @@ Item {
                 width: 26
                 height: 26
                 background: Rectangle {
-                    color: rotateRightButton.hovered ? "#334155" : "transparent"
+                    color: rotateRightButton.hovered ? Theme.secondary : "transparent"
                     radius: 13
                 }
-                contentItem: Text { text: "⟳"; color: "#93c5fd"; font.bold: true; font.pixelSize: 14; anchors.centerIn: parent }
+                contentItem: Icon { name: "rotateRight"; color: Theme.accentBorder;  size: 18; anchors.centerIn: parent }
                 onClicked: root.rotateImage(90)
                 ToolTip.visible: hovered
                 ToolTip.text: "顺时针旋转 90°"

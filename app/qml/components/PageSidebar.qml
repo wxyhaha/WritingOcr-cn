@@ -1,4 +1,5 @@
 import QtQuick
+import "Theme.js" as Theme
 import QtQuick.Controls
 import QtQuick.Layouts
 
@@ -21,8 +22,8 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: "#f8fafc"
-        border.color: "#e2e8f0"
+        color: Theme.background
+        border.color: Theme.border
     }
 
     ColumnLayout {
@@ -33,8 +34,8 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 48
-            color: "#ffffff"
-            border.color: "#e2e8f0"
+            color: Theme.paper
+            border.color: Theme.border
 
             RowLayout {
                 anchors.fill: parent
@@ -50,13 +51,13 @@ Item {
                         text: "页面"
                         font.bold: true
                         font.pixelSize: 13
-                        color: "#0f172a"
+                        color: Theme.ink
                     }
 
                     Rectangle {
                         height: 18
                         radius: 9
-                        color: "#f1f5f9"
+                        color: Theme.surface
                         width: countText.implicitWidth + 10
                         anchors.verticalCenter: parent.verticalCenter
                         Text {
@@ -64,7 +65,7 @@ Item {
                             text: `${root.appController.taskService.currentTaskPageCount}`
                             font.pixelSize: 10
                             font.bold: true
-                            color: "#64748b"
+                            color: Theme.secondary
                             anchors.centerIn: parent
                         }
                     }
@@ -78,13 +79,13 @@ Item {
                     Layout.alignment: Qt.AlignVCenter
                     enabled: root.canAddPages
                     background: Rectangle {
-                        color: !addPagesButton.enabled ? "#f8fafc" : (addPagesButton.hovered ? "#e2e8f0" : "#f1f5f9")
-                        border.color: !addPagesButton.enabled ? "#e2e8f0" : "#cbd5e1"
+                        color: !addPagesButton.enabled ? Theme.background : (addPagesButton.hovered ? Theme.border : Theme.surface)
+                        border.color: !addPagesButton.enabled ? Theme.border : Theme.border
                         radius: 6
                     }
                     contentItem: Text {
-                        text: addPagesButton.enabled ? "➕ 加页" : "已达 10 页"
-                        color: addPagesButton.enabled ? "#334155" : "#94a3b8"
+                        text: addPagesButton.enabled ? "加页" : "已达 10 页"
+                        color: addPagesButton.enabled ? Theme.secondary : Theme.muted
                         font.pixelSize: 11
                         font.bold: true
                         anchors.centerIn: parent
@@ -122,9 +123,9 @@ Item {
                     id: cardBg
                     anchors.fill: parent
                     radius: 10
-                    color: pageDelegate.isCurrent ? "#ffffff" : (thumbMouseArea.containsMouse ? "#ffffff" : "#f8fafc")
+                    color: pageDelegate.isCurrent ? Theme.paper : (thumbMouseArea.containsMouse ? Theme.paper : Theme.background)
                     border.width: pageDelegate.isCurrent ? 2 : 1
-                    border.color: pageDelegate.isCurrent ? "#2563eb" : (thumbMouseArea.containsMouse ? "#93c5fd" : "#e2e8f0")
+                    border.color: pageDelegate.isCurrent ? Theme.accent : (thumbMouseArea.containsMouse ? Theme.accentBorder : Theme.border)
 
                     Behavior on border.color { ColorAnimation { duration: 150 } }
 
@@ -137,7 +138,7 @@ Item {
                         anchors.margins: 4
                         width: 3
                         radius: 1.5
-                        color: "#2563eb"
+                        color: Theme.accent
                     }
 
                     MouseArea {
@@ -168,7 +169,7 @@ Item {
                         width: 24
                         height: 20
                         radius: 5
-                        color: pageDelegate.isCurrent ? "#2563eb" : "#334155"
+                        color: pageDelegate.isCurrent ? Theme.accent : Theme.secondary
 
                         Text {
                             anchors.centerIn: parent
@@ -187,14 +188,14 @@ Item {
                         anchors.margins: 6
                         height: 18
                         radius: 9
-                        color: "#f59e0b"
+                        color: Theme.warning
                         width: badgeText.implicitWidth + 10
 
                         Text {
                             id: badgeText
                             anchors.centerIn: parent
-                            text: `! ${pageDelegate.model.lowConfidenceCount}`
-                            color: "#ffffff"
+                            text: `${pageDelegate.model.lowConfidenceCount}`
+                            color: Theme.paper
                             font.bold: true
                             font.pixelSize: 10
                         }
@@ -214,15 +215,14 @@ Item {
                             height: 22
                             enabled: pageDelegate.index > 0
                             background: Rectangle {
-                                color: moveUpButton.enabled && moveUpButton.hovered ? "#dbeafe" : "#ffffff"
-                                border.color: moveUpButton.enabled ? "#bfdbfe" : "#e2e8f0"
+                                color: moveUpButton.enabled && moveUpButton.hovered ? Theme.accentSoft : Theme.paper
+                                border.color: moveUpButton.enabled ? Theme.accentBorder : Theme.border
                                 radius: 5
                             }
-                            contentItem: Text {
-                                text: "↑"
-                                color: moveUpButton.enabled ? "#2563eb" : "#cbd5e1"
-                                font.bold: true
-                                font.pixelSize: 13
+                            contentItem: Icon {
+                                name: "up"
+                                color: moveUpButton.enabled ? Theme.accent : Theme.border
+                                size: 18
                                 anchors.centerIn: parent
                             }
                             Accessible.name: `上移第 ${pageDelegate.index + 1} 页`
@@ -238,15 +238,14 @@ Item {
                             height: 22
                             enabled: pageDelegate.index < root.appController.taskService.currentTaskPageCount - 1
                             background: Rectangle {
-                                color: moveDownButton.enabled && moveDownButton.hovered ? "#dbeafe" : "#ffffff"
-                                border.color: moveDownButton.enabled ? "#bfdbfe" : "#e2e8f0"
+                                color: moveDownButton.enabled && moveDownButton.hovered ? Theme.accentSoft : Theme.paper
+                                border.color: moveDownButton.enabled ? Theme.accentBorder : Theme.border
                                 radius: 5
                             }
-                            contentItem: Text {
-                                text: "↓"
-                                color: moveDownButton.enabled ? "#2563eb" : "#cbd5e1"
-                                font.bold: true
-                                font.pixelSize: 13
+                            contentItem: Icon {
+                                name: "down"
+                                color: moveDownButton.enabled ? Theme.accent : Theme.border
+                                size: 18
                                 anchors.centerIn: parent
                             }
                             Accessible.name: `下移第 ${pageDelegate.index + 1} 页`
@@ -267,15 +266,14 @@ Item {
                         width: 22
                         height: 22
                         background: Rectangle {
-                            color: deletePageButton.hovered ? "#fee2e2" : "#ffffff"
+                            color: deletePageButton.hovered ? "#fee2e2" : Theme.paper
                             border.color: "#fca5a5"
                             radius: 11
                         }
-                        contentItem: Text {
-                            text: "✕"
-                            color: "#dc2626"
-                            font.bold: true
-                            font.pixelSize: 11
+                        contentItem: Icon {
+                            name: "close"
+                            color: Theme.danger
+                            size: 18
                             anchors.centerIn: parent
                         }
                         onClicked: root.pageDeleted(pageDelegate.index)

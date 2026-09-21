@@ -3,11 +3,22 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs 6.5
 import "../components"
+import QtCore
+import "../components/Theme.js" as Theme
 
 pragma ComponentBehavior: Bound
 
 Item {
     id: root
+    objectName: "proofreadingView"
+
+    property bool pagesVisible: true
+    Settings {
+        id: workspaceSettings
+        category: "ProofreadingWorkspace"
+        property real imageFraction: 0.5
+        property alias pagesVisible: root.pagesVisible
+    }
 
     property var appController
 
@@ -15,8 +26,8 @@ Item {
     signal scanQrRequested()
     signal exportRequested()
 
-    property string saveIndicatorText: "✓ 已自动保存"
-    property color saveIndicatorColor: "#059669"
+    property string saveIndicatorText: "已自动保存"
+    property color saveIndicatorColor: Theme.accent
     property bool saveFailed: false
     property int pendingDeletePageIndex: -1
     property bool textAnnotationsStale: false
@@ -26,8 +37,8 @@ Item {
         interval: 2400
         onTriggered: {
             if (!root.saveFailed) {
-                root.saveIndicatorText = "✓ 已自动保存";
-                root.saveIndicatorColor = "#059669";
+                root.saveIndicatorText = "已自动保存";
+                root.saveIndicatorColor = Theme.accent;
             }
         }
     }
@@ -39,8 +50,8 @@ Item {
         }
         function onTaskSaved() {
             root.saveFailed = false;
-            root.saveIndicatorText = "✓ 已保存";
-            root.saveIndicatorColor = "#059669";
+            root.saveIndicatorText = "已保存";
+            root.saveIndicatorColor = Theme.accent;
             saveIndicatorTimer.restart();
         }
         function onTaskError(message) {
@@ -48,8 +59,8 @@ Item {
                 return;
             }
             root.saveFailed = true;
-            root.saveIndicatorText = "⚠ 保存失败";
-            root.saveIndicatorColor = "#dc2626";
+            root.saveIndicatorText = "保存失败";
+            root.saveIndicatorColor = Theme.danger;
             saveIndicatorTimer.stop();
         }
     }
@@ -99,13 +110,13 @@ Item {
                 text: "确定删除当前页面吗？"
                 font.bold: true
                 font.pixelSize: 14
-                color: "#0f172a"
+                color: Theme.ink
                 Layout.fillWidth: true
             }
             Text {
                 text: "页面图片、OCR 结果和校对文本都会从当前任务中移除，此操作不可撤销。"
                 font.pixelSize: 12
-                color: "#64748b"
+                color: Theme.secondary
                 wrapMode: Text.Wrap
                 Layout.fillWidth: true
             }
@@ -114,71 +125,49 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: "#f8fafc"
+        color: Theme.background
 
         ColumnLayout {
             anchors.fill: parent
             spacing: 0
 
-            // Top Proofreading Toolbar
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 52
-                color: "#ffffff"
-                border.color: "#e2e8f0"
-                z: 10
-
+                Layout.preferredHeight: 60
+                color: Theme.paper
                 RowLayout {
                     anchors.fill: parent
                     anchors.leftMargin: 16
                     anchors.rightMargin: 16
                     spacing: 10
-
-                    Button {
-                        text: "← 返回主页"
-                        Layout.preferredHeight: 32
-                        background: Rectangle {
-                            color: "#f1f5f9"
-                            border.color: "#cbd5e1"
-                            radius: 4
-                        }
-                        contentItem: Text {
-                            text: "← 返回主页"
-                            color: "#334155"
-                            font.pixelSize: 12
-                            anchors.centerIn: parent
-                        }
+                    ActionButton {
+                        iconName: "left"; text: "手稿库"; quiet: true
                         onClicked: {
-                            root.appController.taskService.saveNow();
-                            root.backToHomeRequested();
+                            if (root.appController.taskService.saveNow()) root.backToHomeRequested();
                         }
                     }
-
-                    Rectangle {
-                        Layout.preferredWidth: 1
-                        Layout.preferredHeight: 24
-                        color: "#e2e8f0"
+                    ActionButton {
+                        iconName: "sidebar"; quiet: true
+                        ToolTip.text: root.pagesVisible ? "收起页面列表" : "展开页面列表"
+                        onClicked: root.pagesVisible = !root.pagesVisible
                     }
-
-                    // Editable Title
                     TextField {
                         id: titleField
                         text: root.appController.taskService.currentTaskTitle
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 100
+                        Layout.preferredHeight: 36
+                        font.pixelSize: 16
                         font.bold: true
-                        font.pixelSize: 14
-                        Layout.preferredWidth: 220
-                        Layout.preferredHeight: 32
+                        color: Theme.ink
+                        selectByMouse: true
                         background: Rectangle {
-                            color: titleField.activeFocus ? "#ffffff" : "transparent"
-                            border.color: titleField.activeFocus ? "#2563eb" : "transparent"
-                            radius: 4
+                            radius: 6
+                            color: titleField.activeFocus ? Theme.paper : "transparent"
+                            border.color: titleField.activeFocus ? Theme.accent : "transparent"
                         }
-                        onEditingFinished: {
-                            root.appController.taskService.updateTaskTitle(text);
-                        }
+                        onEditingFinished: root.appController.taskService.updateTaskTitle(text)
                     }
-
-                    // Quick Filter Printed Text Switch
                     CheckBox {
                         id: filterPrintedCheck
                         text: "过滤印刷体"
@@ -187,71 +176,35 @@ Item {
                             root.appController.settingsService.filterPrintedText = checked;
                             root.appController.taskService.applyFilterPrintedToCurrentPage(checked);
                         }
-                        contentItem: Text {
-                            text: filterPrintedCheck.text
-                            font.pixelSize: 12
-                            color: "#475569"
-                            leftPadding: filterPrintedCheck.indicator.width + 4
-                            verticalAlignment: Text.AlignVCenter
-                        }
                     }
-
-                    Item { Layout.fillWidth: true }
-
-                    // OCR Actions
-                    Button {
-                        text: "⚡ 识别本页"
-                        Layout.preferredHeight: 32
-                        enabled: !root.appController.ocrService.isProcessing && root.appController.taskService.currentPageIndex >= 0
-                        background: Rectangle {
-                            color: parent.enabled ? "#eff6ff" : "#f1f5f9"
-                            border.color: parent.enabled ? "#bfdbfe" : "#e2e8f0"
-                            radius: 4
-                        }
-                        contentItem: Text {
-                            text: "⚡ 识别本页"
-                            color: parent.enabled ? "#2563eb" : "#94a3b8"
-                            font.bold: true
-                            font.pixelSize: 12
-                            anchors.centerIn: parent
-                        }
-                        onClicked: root.appController.ocrService.recognizeCurrentPage()
-                    }
-
-                    Button {
-                        text: "⚡⚡ 全篇识别"
-                        Layout.preferredHeight: 32
+                    ActionButton {
+                        id: recognizeButton
+                        objectName: "recognizeButton"
+                        text: root.appController.ocrService.isProcessing ? "正在识别" : "开始识别"
+                        iconName: "scan"
+                        primary: true
                         enabled: !root.appController.ocrService.isProcessing && root.appController.taskService.currentTaskPageCount > 0
-                        background: Rectangle {
-                            color: parent.enabled ? "#2563eb" : "#94a3b8"
-                            radius: 4
+                        onClicked: recognitionMenu.open()
+                        Menu {
+                            id: recognitionMenu
+                            objectName: "recognitionMenu"
+                            y: recognizeButton.height + 4
+                            MenuItem {
+                                text: "识别当前页"
+                                enabled: root.appController.taskService.currentPageIndex >= 0
+                                onTriggered: root.appController.ocrService.recognizeCurrentPage()
+                            }
+                            MenuItem {
+                                text: "识别整篇手稿"
+                                onTriggered: root.appController.ocrService.recognizeCurrentTask()
+                            }
                         }
-                        contentItem: Text {
-                            text: "⚡⚡ 全篇识别"
-                            color: "white"
-                            font.bold: true
-                            font.pixelSize: 12
-                            anchors.centerIn: parent
-                        }
-                        onClicked: root.appController.ocrService.recognizeCurrentTask()
                     }
-
-                    Button {
-                        text: "📱 手机加图"
-                        Layout.preferredHeight: 32
-                        background: Rectangle { color: "#ecfdf5"; border.color: "#a7f3d0"; radius: 4 }
-                        contentItem: Text { text: "📱 手机加图"; font.pixelSize: 12; color: "#059669"; anchors.centerIn: parent }
-                        onClicked: root.scanQrRequested()
-                    }
-
-                    Button {
-                        text: "📥 导出"
-                        Layout.preferredHeight: 32
-                        background: Rectangle { color: "#10b981"; radius: 4 }
-                        contentItem: Text { text: "📥 导出"; color: "white"; font.bold: true; font.pixelSize: 12; anchors.centerIn: parent }
+                    ActionButton { text: "手机加图"; iconName: "phone"; onClicked: root.scanQrRequested() }
+                    ActionButton {
+                        text: "导出"; iconName: "download"
                         onClicked: {
-                            root.appController.taskService.saveNow();
-                            root.exportRequested();
+                            if (root.appController.taskService.saveNow()) root.exportRequested();
                         }
                     }
                 }
@@ -261,13 +214,13 @@ Item {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: root.appController.ocrService.isProcessing ? 3 : 0
-                color: "#e2e8f0"
+                color: Theme.border
                 visible: root.appController.ocrService.isProcessing
 
                 Rectangle {
                     height: parent.height
                     width: root.appController.ocrService.totalProgress > 0 ? (parent.width * root.appController.ocrService.currentProgress / root.appController.ocrService.totalProgress) : (parent.width * 0.4)
-                    color: "#2563eb"
+                    color: Theme.accent
                 }
             }
 
@@ -276,18 +229,30 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
-                RowLayout {
+                SplitView {
+                    id: workspaceSplit
+                    objectName: "workspaceSplit"
                     anchors.fill: parent
-                    spacing: 0
+                    orientation: Qt.Horizontal
+                    onResizingChanged: {
+                        if (!resizing && width > 0)
+                            workspaceSettings.imageFraction = imageViewer.width / Math.max(1, imageViewer.width + textEditor.width);
+                    }
+                    handle: Rectangle {
+                        implicitWidth: 7
+                        color: SplitHandle.pressed ? Theme.accentBorder : SplitHandle.hovered ? Theme.accentSoft : Theme.background
+                        Rectangle { anchors.centerIn: parent; width: 1; height: 32; color: Theme.border }
+                    }
 
                     // Left Thumbnail Page Sidebar
                     PageSidebar {
                         id: pageSidebar
+                        objectName: "pageSidebar"
                         appController: root.appController
-                        Layout.preferredWidth: Math.max(140, Math.min(200, parent.width * 0.16))
-                        Layout.minimumWidth: 140
-                        Layout.maximumWidth: 200
-                        Layout.fillHeight: true
+                        visible: root.pagesVisible
+                        SplitView.preferredWidth: 164
+                        SplitView.minimumWidth: 140
+                        SplitView.maximumWidth: 230
                         pageModel: root.appController.pageListModel
                         currentIndex: root.appController.taskService.currentPageIndex
                         onPageSelected: (index) => {
@@ -305,10 +270,9 @@ Item {
                     // Middle Original Image Viewer
                     ImageViewer {
                         id: imageViewer
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        Layout.preferredWidth: 1
-                        Layout.minimumWidth: 240
+                        objectName: "imageViewer"
+                        SplitView.preferredWidth: (workspaceSplit.width - (root.pagesVisible ? pageSidebar.width + 7 : 0) - 7) * workspaceSettings.imageFraction
+                        SplitView.minimumWidth: 260
                         appController: root.appController
                         imagePath: (root.appController.taskService.currentProcessedImage !== "" ? root.appController.taskService.currentProcessedImage : root.appController.taskService.currentOriginalImage)
                         blockModel: root.appController.ocrBlockListModel
@@ -321,10 +285,9 @@ Item {
                     // Right Proofreading Text Editor
                     TextEditorView {
                         id: textEditor
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        Layout.preferredWidth: 1
-                        Layout.minimumWidth: 240
+                        objectName: "textEditor"
+                        SplitView.fillWidth: true
+                        SplitView.minimumWidth: 360
                         appController: root.appController
                         text: root.appController.taskService.currentEditedText
                         blockModel: root.appController.ocrBlockListModel
@@ -332,8 +295,8 @@ Item {
                         onTextEdited: (newText) => {
                             root.textAnnotationsStale = true;
                             root.saveFailed = false;
-                            root.saveIndicatorText = "● 待保存";
-                            root.saveIndicatorColor = "#d97706";
+                            root.saveIndicatorText = "待保存";
+                            root.saveIndicatorColor = Theme.warning;
                             saveIndicatorTimer.stop();
                             root.appController.taskService.updateEditedText(newText);
                         }
@@ -352,9 +315,9 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.top: parent.top
                     anchors.topMargin: 16
-                    color: "#ffffff"
+                    color: Theme.paper
                     radius: 10
-                    border.color: "#bfdbfe"
+                    border.color: Theme.accentBorder
                     z: 50
 
                     // Drop shadow effect simulation
@@ -393,10 +356,10 @@ Item {
                                     elide: Text.ElideRight
                                 }
                                 Text {
-                                    text: `⏱️ ${root.appController.ocrService.elapsedSeconds.toFixed(1)}s`
+                                    text: `${root.appController.ocrService.elapsedSeconds.toFixed(1)}s`
                                     font.pixelSize: 12
                                     font.bold: true
-                                    color: "#2563eb"
+                                    color: Theme.accent
                                 }
                             }
 
@@ -433,8 +396,8 @@ Item {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 36
-                color: "#ffffff"
-                border.color: "#e2e8f0"
+                color: Theme.paper
+                border.color: Theme.border
 
                 RowLayout {
                     anchors.fill: parent
@@ -443,46 +406,40 @@ Item {
                     spacing: 12
 
                     Text {
-                        text: `当前第 ${root.appController.taskService.currentPageIndex + 1} / ${root.appController.taskService.currentTaskPageCount} 页`
+                        text: `${Math.max(0, root.appController.taskService.currentPageIndex + 1)} / ${root.appController.taskService.currentTaskPageCount} 页`
                         font.pixelSize: 12
-                        color: "#64748b"
+                        color: Theme.secondary
                     }
 
                     Text {
                         text: `|  总字数: ${root.appController.taskService.currentEditedText.length}`
                         font.pixelSize: 12
-                        color: "#64748b"
+                        color: Theme.secondary
                     }
 
                     Text {
                         text: `|  低置信度: ${root.appController.ocrBlockListModel.lowConfidenceCount} 处`
                         font.pixelSize: 12
-                        color: root.appController.ocrBlockListModel.lowConfidenceCount > 0 ? "#b45309" : "#64748b"
+                        color: root.appController.ocrBlockListModel.lowConfidenceCount > 0 ? Theme.warning : Theme.secondary
                         font.bold: root.appController.ocrBlockListModel.lowConfidenceCount > 0
                     }
 
-                    Text {
-                        visible: root.appController.ocrService.lastDuration > 0
-                        text: `|  ⚡ 最近识别耗时: ${root.appController.ocrService.lastDuration.toFixed(1)} 秒`
-                        font.pixelSize: 12
-                        color: "#2563eb"
-                    }
 
                     Item { Layout.fillWidth: true }
 
                     // Low confidence jump buttons
                     Button {
-                        text: "◀ 上一处低置信度"
+                        text: "上一处疑点"
                         Layout.preferredHeight: 28
                         enabled: root.appController.ocrBlockListModel.lowConfidenceCount > 0
                         background: Rectangle {
-                            color: parent.enabled ? "#fef3c7" : "#f1f5f9"
-                            border.color: parent.enabled ? "#fde68a" : "#e2e8f0"
+                            color: parent.enabled ? Theme.warningSoft : Theme.surface
+                            border.color: parent.enabled ? "#fde68a" : Theme.border
                             radius: 4
                         }
                         contentItem: Text {
-                            text: "◀ 上一处低置信度"
-                            color: parent.enabled ? "#92400e" : "#94a3b8"
+                            text: "上一处疑点"
+                            color: parent.enabled ? Theme.warning : Theme.muted
                             font.pixelSize: 11
                             font.bold: true
                             anchors.centerIn: parent
@@ -499,17 +456,17 @@ Item {
                     }
 
                     Button {
-                        text: "下一处低置信度 ▶"
+                        text: "下一处疑点"
                         Layout.preferredHeight: 28
                         enabled: root.appController.ocrBlockListModel.lowConfidenceCount > 0
                         background: Rectangle {
-                            color: parent.enabled ? "#fef3c7" : "#f1f5f9"
-                            border.color: parent.enabled ? "#fde68a" : "#e2e8f0"
+                            color: parent.enabled ? Theme.warningSoft : Theme.surface
+                            border.color: parent.enabled ? "#fde68a" : Theme.border
                             radius: 4
                         }
                         contentItem: Text {
-                            text: "下一处低置信度 ▶"
-                            color: parent.enabled ? "#92400e" : "#94a3b8"
+                            text: "下一处疑点"
+                            color: parent.enabled ? Theme.warning : Theme.muted
                             font.pixelSize: 11
                             font.bold: true
                             anchors.centerIn: parent

@@ -1,4 +1,6 @@
 import QtQuick
+import "../components"
+import "../components/Theme.js" as Theme
 import QtQuick.Controls
 import QtQuick.Layouts
 
@@ -14,9 +16,9 @@ Dialog {
     property var appController
 
     background: Rectangle {
-        color: "#ffffff"
+        color: Theme.paper
         radius: 16
-        border.color: "#e2e8f0"
+        border.color: Theme.border
 
         // Modal shadow
         Rectangle {
@@ -37,7 +39,7 @@ Dialog {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 56
-            color: "#ffffff"
+            color: Theme.paper
             radius: 16
 
             RowLayout {
@@ -48,10 +50,10 @@ Dialog {
                 Row {
                     spacing: 8
                     Layout.alignment: Qt.AlignVCenter
-                    Text { text: "⚙️"; font.pixelSize: 18; anchors.verticalCenter: parent.verticalCenter }
+                    Icon { name: "settings"; size: 18; anchors.verticalCenter: parent.verticalCenter }
                     Column {
                         spacing: 2
-                        Text { text: "应用设置"; font.bold: true; font.pixelSize: 16; color: "#0f172a" }
+                        Text { text: "应用设置"; font.bold: true; font.pixelSize: 16; color: Theme.ink }
                     }
                 }
 
@@ -62,10 +64,10 @@ Dialog {
                     Layout.preferredWidth: 32
                     Layout.preferredHeight: 32
                     background: Rectangle {
-                        color: closeSettingsButton.hovered ? "#f1f5f9" : "transparent"
+                        color: closeSettingsButton.hovered ? Theme.surface : "transparent"
                         radius: 16
                     }
-                    contentItem: Text { text: "✕"; color: "#64748b"; font.pixelSize: 14; anchors.centerIn: parent }
+                    contentItem: Icon { name: "close"; color: Theme.secondary; size: 18; anchors.centerIn: parent }
                     onClicked: root.close()
                 }
             }
@@ -75,7 +77,7 @@ Dialog {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 height: 1
-                color: "#e2e8f0"
+                color: Theme.border
             }
         }
 
@@ -99,16 +101,16 @@ Dialog {
 
                     Row {
                         spacing: 6
-                        Text { text: "🔍"; font.pixelSize: 13 }
-                        Text { text: "OCR 识别与模型设置"; font.bold: true; font.pixelSize: 13; color: "#1e293b" }
+                        Icon { name: "search"; size: 18 }
+                        Text { text: "OCR 识别与模型设置"; font.bold: true; font.pixelSize: 13; color: Theme.ink }
                     }
 
                     Rectangle {
                         width: parent.width
                         height: ocrSettingCol.implicitHeight + 24
                         radius: 10
-                        color: "#f8fafc"
-                        border.color: "#e2e8f0"
+                        color: Theme.background
+                        border.color: Theme.border
 
                         Column {
                             id: ocrSettingCol
@@ -119,7 +121,7 @@ Dialog {
                             // Engine
                             RowLayout {
                                 width: parent.width
-                                Text { text: "识别引擎:"; font.pixelSize: 13; color: "#475569"; Layout.preferredWidth: 120 }
+                                Text { text: "识别引擎:"; font.pixelSize: 13; color: Theme.secondary; Layout.preferredWidth: 120 }
                                 ComboBox {
                                     model: ["PaddleOCR (PP-OCRv5 本地引擎)"]
                                     currentIndex: 0
@@ -133,7 +135,7 @@ Dialog {
                                 Text {
                                     text: `低置信度阈值 (${(thresholdSlider.value * 100).toFixed(0)}%):`
                                     font.pixelSize: 13
-                                    color: "#475569"
+                                    color: Theme.secondary
                                     Layout.preferredWidth: 130
                                 }
                                 Slider {
@@ -155,8 +157,8 @@ Dialog {
                                 Column {
                                     Layout.fillWidth: true
                                     spacing: 2
-                                    Text { text: "过滤印刷体/相机水印:"; font.pixelSize: 13; color: "#334155"; font.bold: true }
-                                    Text { text: "基于像素形态学自动剔除印刷行头与拍照水印"; font.pixelSize: 11; color: "#64748b" }
+                                    Text { text: "过滤印刷体/相机水印:"; font.pixelSize: 13; color: Theme.secondary; font.bold: true }
+                                    Text { text: "基于像素形态学自动剔除印刷行头与拍照水印"; font.pixelSize: 11; color: Theme.secondary }
                                 }
                                 Switch {
                                     checked: root.appController.settingsService.filterPrintedText
@@ -173,8 +175,8 @@ Dialog {
                                 Column {
                                     Layout.fillWidth: true
                                     spacing: 2
-                                    Text { text: "图像适度对比度增强:"; font.pixelSize: 13; color: "#334155" }
-                                    Text { text: "导入时自动拉伸直方图改善淡色墨水对比度"; font.pixelSize: 11; color: "#64748b" }
+                                    Text { text: "图像适度对比度增强:"; font.pixelSize: 13; color: Theme.secondary }
+                                    Text { text: "导入时自动拉伸直方图改善淡色墨水对比度"; font.pixelSize: 11; color: Theme.secondary }
                                 }
                                 Switch {
                                     checked: root.appController.settingsService.autoEnhance
@@ -192,16 +194,16 @@ Dialog {
 
                     Row {
                         spacing: 6
-                        Text { text: "🌐"; font.pixelSize: 13 }
-                        Text { text: "本地服务与网络配置"; font.bold: true; font.pixelSize: 13; color: "#1e293b" }
+                        Icon { name: "network"; size: 18 }
+                        Text { text: "本地服务与网络配置"; font.bold: true; font.pixelSize: 13; color: Theme.ink }
                     }
 
                     Rectangle {
                         width: parent.width
                         height: netSettingCol.implicitHeight + 24
                         radius: 10
-                        color: "#f8fafc"
-                        border.color: "#e2e8f0"
+                        color: Theme.background
+                        border.color: Theme.border
 
                         Column {
                             id: netSettingCol
@@ -211,7 +213,7 @@ Dialog {
 
                             RowLayout {
                                 width: parent.width
-                                Text { text: "OCR 服务端地址:"; font.pixelSize: 13; color: "#475569"; Layout.preferredWidth: 120 }
+                                Text { text: "OCR 服务端地址:"; font.pixelSize: 13; color: Theme.secondary; Layout.preferredWidth: 120 }
                                 TextField {
                                     id: workerUrlField
                                     text: root.appController.settingsService.ocrWorkerUrl
@@ -222,7 +224,7 @@ Dialog {
                                     id: checkWorkerButton
                                     text: "检测"
                                     Layout.preferredHeight: 34
-                                    background: Rectangle { color: checkWorkerButton.hovered ? "#e2e8f0" : "#f1f5f9"; border.color: "#cbd5e1"; radius: 6 }
+                                    background: Rectangle { color: checkWorkerButton.hovered ? Theme.border : Theme.surface; border.color: Theme.border; radius: 6 }
                                     onClicked: root.appController.ocrService.checkWorkerHealth()
                                 }
                             }
@@ -231,22 +233,22 @@ Dialog {
                             Rectangle {
                                 width: parent.width
                                 height: 32
-                                color: root.appController.ocrService.isWorkerRunning ? "#ecfdf5" : "#fff7ed"
+                                color: root.appController.ocrService.isWorkerRunning ? Theme.accentSoft : "#fff7ed"
                                 radius: 6
-                                border.color: root.appController.ocrService.isWorkerRunning ? "#a7f3d0" : "#fed7aa"
+                                border.color: root.appController.ocrService.isWorkerRunning ? Theme.accentBorder : "#fed7aa"
 
                                 Row {
                                     anchors.centerIn: parent
                                     spacing: 6
-                                    Text {
-                                        text: root.appController.ocrService.isWorkerRunning ? "●" : "○"
-                                        color: root.appController.ocrService.isWorkerRunning ? "#10b981" : "#f97316"
-                                        font.pixelSize: 10
+                                    Icon {
+                                        name: root.appController.ocrService.isWorkerRunning ? "check" : "warning"
+                                        color: root.appController.ocrService.isWorkerRunning ? Theme.accent : "#f97316"
+                                        size: 20
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
                                     Text {
                                         text: root.appController.ocrService.workerStatusMessage || "本地 PaddleOCR 服务状态"
-                                        color: root.appController.ocrService.isWorkerRunning ? "#047857" : "#c2410c"
+                                        color: root.appController.ocrService.isWorkerRunning ? Theme.accent : "#c2410c"
                                         font.pixelSize: 11
                                         font.bold: true
                                         anchors.verticalCenter: parent.verticalCenter
@@ -263,7 +265,7 @@ Dialog {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 54
-            color: "#ffffff"
+            color: Theme.paper
             radius: 16
 
             Rectangle {
@@ -271,7 +273,7 @@ Dialog {
                 anchors.right: parent.right
                 anchors.top: parent.top
                 height: 1
-                color: "#e2e8f0"
+                color: Theme.border
             }
 
             Button {
@@ -283,7 +285,7 @@ Dialog {
                 height: 34
                 width: 90
                 background: Rectangle {
-                    color: finishSettingsButton.hovered ? "#1d4ed8" : "#2563eb"
+                    color: finishSettingsButton.hovered ? Theme.accentHover : Theme.accent
                     radius: 6
                 }
                 contentItem: Text {

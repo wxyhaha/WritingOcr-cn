@@ -1,4 +1,5 @@
 import QtQuick
+import "Theme.js" as Theme
 import QtQuick.Controls
 import QtQuick.Layouts
 
@@ -11,7 +12,7 @@ Item {
     property var appController
     property var blockModel: null
     property int selectedIndex: blockModel ? blockModel.selectedIndex : -1
-    property int editorFontSize: 15
+    property int editorFontSize: 18
     property bool isSearchOpen: false
     property bool annotationsStale: false
 
@@ -74,8 +75,8 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: "#ffffff"
-        border.color: "#e2e8f0"
+        color: Theme.paper
+        border.color: Theme.border
     }
 
     ColumnLayout {
@@ -86,8 +87,8 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 44
-            color: "#ffffff"
-            border.color: "#e2e8f0"
+            color: Theme.paper
+            border.color: Theme.border
 
             RowLayout {
                 anchors.fill: parent
@@ -99,16 +100,16 @@ Item {
                     spacing: 6
                     Layout.alignment: Qt.AlignVCenter
 
-                    Text {
-                        text: "✍️"
-                        font.pixelSize: 14
+                    Icon {
+                        name: "edit"
+                        size: 18
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     Text {
-                        text: "识别与校对文本"
+                        text: "校对稿"
                         font.bold: true
                         font.pixelSize: 13
-                        color: "#0f172a"
+                        color: Theme.ink
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -120,15 +121,15 @@ Item {
                     id: searchToggleButton
                     Layout.preferredHeight: 26
                     background: Rectangle {
-                        color: root.isSearchOpen ? "#eff6ff" : (searchToggleButton.hovered ? "#f1f5f9" : "transparent")
-                        border.color: root.isSearchOpen ? "#3b82f6" : "#cbd5e1"
+                        color: root.isSearchOpen ? Theme.accentSoft : (searchToggleButton.hovered ? Theme.surface : "transparent")
+                        border.color: root.isSearchOpen ? Theme.accent : Theme.border
                         radius: 4
                     }
                     contentItem: Row {
                         anchors.centerIn: parent
                         spacing: 4
-                        Text { text: "🔍"; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: "查找替换"; font.pixelSize: 11; color: root.isSearchOpen ? "#1d4ed8" : "#475569"; anchors.verticalCenter: parent.verticalCenter }
+                        Icon { name: "search"; size: 18; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: "查找替换"; font.pixelSize: 11; color: root.isSearchOpen ? Theme.accentHover : Theme.secondary; anchors.verticalCenter: parent.verticalCenter }
                     }
                     onClicked: {
                         root.isSearchOpen = !root.isSearchOpen;
@@ -151,11 +152,11 @@ Item {
                         height: 26
                         width: 26
                         background: Rectangle {
-                            color: decreaseFontButton.hovered ? "#f1f5f9" : "transparent"
-                            border.color: "#cbd5e1"
+                            color: decreaseFontButton.hovered ? Theme.surface : "transparent"
+                            border.color: Theme.border
                             radius: 4
                         }
-                        contentItem: Text { text: "A-"; font.pixelSize: 10; font.bold: true; color: "#475569"; anchors.centerIn: parent }
+                        contentItem: Text { text: "A-"; font.pixelSize: 10; font.bold: true; color: Theme.secondary; anchors.centerIn: parent }
                         onClicked: {
                             if (root.editorFontSize > 12) root.editorFontSize -= 1;
                         }
@@ -169,11 +170,11 @@ Item {
                         height: 26
                         width: 26
                         background: Rectangle {
-                            color: increaseFontButton.hovered ? "#f1f5f9" : "transparent"
-                            border.color: "#cbd5e1"
+                            color: increaseFontButton.hovered ? Theme.surface : "transparent"
+                            border.color: Theme.border
                             radius: 4
                         }
-                        contentItem: Text { text: "A+"; font.pixelSize: 10; font.bold: true; color: "#475569"; anchors.centerIn: parent }
+                        contentItem: Text { text: "A+"; font.pixelSize: 10; font.bold: true; color: Theme.secondary; anchors.centerIn: parent }
                         onClicked: {
                             if (root.editorFontSize < 24) root.editorFontSize += 1;
                         }
@@ -190,26 +191,30 @@ Item {
                     Layout.alignment: Qt.AlignVCenter
                     enabled: textArea.text.trim().length > 0
                     background: Rectangle {
-                        color: copyTextButton.hovered ? "#eff6ff" : "#f8fafc"
-                        border.color: copyTextButton.hovered ? "#bfdbfe" : "#cbd5e1"
+                        color: copyTextButton.hovered ? Theme.accentSoft : Theme.background
+                        border.color: copyTextButton.hovered ? Theme.accentBorder : Theme.border
                         radius: 6
                     }
                     contentItem: Row {
                         anchors.centerIn: parent
                         spacing: 4
-                        Text { text: "📋"; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: "复制文本"; font.pixelSize: 11; font.bold: true; color: "#1d4ed8"; anchors.verticalCenter: parent.verticalCenter }
+                        Icon { name: "copy"; size: 18; anchors.verticalCenter: parent.verticalCenter }
+                        Text { visible: root.width >= 440; text: "复制文本"; font.pixelSize: 11; font.bold: true; color: Theme.accentHover; anchors.verticalCenter: parent.verticalCenter }
                     }
                     onClicked: {
                         root.appController.copyToClipboard(textArea.text);
                     }
+                    Accessible.name: "复制文本"
+                    ToolTip.visible: hovered
+                    ToolTip.text: "复制文本"
                 }
 
                 // Word count pill
                 Rectangle {
+                    visible: root.width >= 480
                     Layout.preferredHeight: 24
                     radius: 12
-                    color: "#f1f5f9"
+                    color: Theme.surface
                     Layout.preferredWidth: wordCountText.implicitWidth + 14
                     Layout.alignment: Qt.AlignVCenter
 
@@ -219,7 +224,7 @@ Item {
                         text: `${textArea.text.trim().length} 字`
                         font.pixelSize: 11
                         font.bold: true
-                        color: "#475569"
+                        color: Theme.secondary
                     }
                 }
             }
@@ -232,8 +237,8 @@ Item {
             Layout.preferredHeight: root.isSearchOpen ? 86 : 0
             visible: root.isSearchOpen
             clip: true
-            color: "#f8fafc"
-            border.color: "#e2e8f0"
+            color: Theme.background
+            border.color: Theme.border
 
             property int matchCount: 0
             property int currentMatchIndex: 0
@@ -312,7 +317,7 @@ Item {
 
                     TextField {
                         id: searchField
-                        placeholderText: "🔍 查找内容..."
+                        placeholderText: "查找内容..."
                         Layout.fillWidth: true
                         Layout.preferredHeight: 28
                         font.pixelSize: 12
@@ -322,8 +327,8 @@ Item {
                         rightPadding: 8
                         background: Rectangle {
                             implicitHeight: 28
-                            color: "#ffffff"
-                            border.color: searchField.activeFocus ? "#3b82f6" : "#cbd5e1"
+                            color: Theme.paper
+                            border.color: searchField.activeFocus ? Theme.accent : Theme.border
                             radius: 4
                         }
                         onTextChanged: searchBar.updateMatches()
@@ -335,14 +340,14 @@ Item {
                         Layout.preferredHeight: 26
                         Layout.preferredWidth: matchCountText.implicitWidth + 12
                         radius: 4
-                        color: searchBar.matchCount > 0 ? "#eff6ff" : "#f1f5f9"
-                        border.color: searchBar.matchCount > 0 ? "#bfdbfe" : "#e2e8f0"
+                        color: searchBar.matchCount > 0 ? Theme.accentSoft : Theme.surface
+                        border.color: searchBar.matchCount > 0 ? Theme.accentBorder : Theme.border
                         Text {
                             id: matchCountText
                             anchors.centerIn: parent
                             text: searchBar.matchCount > 0 ? `${searchBar.currentMatchIndex + 1}/${searchBar.matchCount}` : (searchField.text ? "无匹配" : "-")
                             font.pixelSize: 11
-                            color: searchBar.matchCount > 0 ? "#1d4ed8" : "#94a3b8"
+                            color: searchBar.matchCount > 0 ? Theme.accentHover : Theme.muted
                         }
                     }
 
@@ -351,8 +356,8 @@ Item {
                         Layout.preferredHeight: 26
                         Layout.preferredWidth: 26
                         enabled: searchBar.matchCount > 0
-                        background: Rectangle { color: previousMatchButton.hovered ? "#e2e8f0" : "#f1f5f9"; border.color: "#cbd5e1"; radius: 4 }
-                        contentItem: Text { text: "▲"; font.pixelSize: 10; color: parent.enabled ? "#334155" : "#94a3b8"; anchors.centerIn: parent }
+                        background: Rectangle { color: previousMatchButton.hovered ? Theme.border : Theme.surface; border.color: Theme.border; radius: 4 }
+                        contentItem: Icon { name: "up"; size: 18; color: parent.enabled ? Theme.secondary : Theme.muted; anchors.centerIn: parent }
                         onClicked: searchBar.prevMatch()
                     }
 
@@ -361,8 +366,8 @@ Item {
                         Layout.preferredHeight: 26
                         Layout.preferredWidth: 26
                         enabled: searchBar.matchCount > 0
-                        background: Rectangle { color: nextMatchButton.hovered ? "#e2e8f0" : "#f1f5f9"; border.color: "#cbd5e1"; radius: 4 }
-                        contentItem: Text { text: "▼"; font.pixelSize: 10; color: parent.enabled ? "#334155" : "#94a3b8"; anchors.centerIn: parent }
+                        background: Rectangle { color: nextMatchButton.hovered ? Theme.border : Theme.surface; border.color: Theme.border; radius: 4 }
+                        contentItem: Icon { name: "down"; size: 18; color: parent.enabled ? Theme.secondary : Theme.muted; anchors.centerIn: parent }
                         onClicked: searchBar.nextMatch()
                     }
 
@@ -371,7 +376,7 @@ Item {
                         Layout.preferredHeight: 26
                         Layout.preferredWidth: 26
                         background: Rectangle { color: closeSearchButton.hovered ? "#fee2e2" : "transparent"; radius: 4 }
-                        contentItem: Text { text: "✕"; font.pixelSize: 12; color: "#64748b"; anchors.centerIn: parent }
+                        contentItem: Icon { name: "close"; size: 18; color: Theme.secondary; anchors.centerIn: parent }
                         onClicked: root.isSearchOpen = false
                     }
                 }
@@ -384,7 +389,7 @@ Item {
 
                     TextField {
                         id: replaceField
-                        placeholderText: "✍️ 替换为..."
+                        placeholderText: "替换为..."
                         Layout.fillWidth: true
                         Layout.preferredHeight: 28
                         font.pixelSize: 12
@@ -394,8 +399,8 @@ Item {
                         rightPadding: 8
                         background: Rectangle {
                             implicitHeight: 28
-                            color: "#ffffff"
-                            border.color: replaceField.activeFocus ? "#3b82f6" : "#cbd5e1"
+                            color: Theme.paper
+                            border.color: replaceField.activeFocus ? Theme.accent : Theme.border
                             radius: 4
                         }
                     }
@@ -406,11 +411,11 @@ Item {
                         text: "替换"
                         enabled: searchBar.matchCount > 0
                         background: Rectangle {
-                            color: replaceButton.enabled ? (replaceButton.hovered ? "#dbeafe" : "#eff6ff") : "#f1f5f9"
-                            border.color: parent.enabled ? "#bfdbfe" : "#e2e8f0"
+                            color: replaceButton.enabled ? (replaceButton.hovered ? Theme.accentSoft : Theme.accentSoft) : Theme.surface
+                            border.color: parent.enabled ? Theme.accentBorder : Theme.border
                             radius: 4
                         }
-                        contentItem: Text { text: "替换"; font.pixelSize: 11; font.bold: true; color: parent.enabled ? "#1d4ed8" : "#94a3b8"; anchors.centerIn: parent }
+                        contentItem: Text { text: "替换"; font.pixelSize: 11; font.bold: true; color: parent.enabled ? Theme.accentHover : Theme.muted; anchors.centerIn: parent }
                         onClicked: searchBar.replaceCurrent()
                     }
 
@@ -420,11 +425,11 @@ Item {
                         text: "全部替换"
                         enabled: searchBar.matchCount > 0
                         background: Rectangle {
-                            color: replaceAllButton.enabled ? (replaceAllButton.hovered ? "#dbeafe" : "#eff6ff") : "#f1f5f9"
-                            border.color: parent.enabled ? "#bfdbfe" : "#e2e8f0"
+                            color: replaceAllButton.enabled ? (replaceAllButton.hovered ? Theme.accentSoft : Theme.accentSoft) : Theme.surface
+                            border.color: parent.enabled ? Theme.accentBorder : Theme.border
                             radius: 4
                         }
-                        contentItem: Text { text: "全部替换"; font.pixelSize: 11; font.bold: true; color: parent.enabled ? "#1d4ed8" : "#94a3b8"; anchors.centerIn: parent }
+                        contentItem: Text { text: "全部替换"; font.pixelSize: 11; font.bold: true; color: parent.enabled ? Theme.accentHover : Theme.muted; anchors.centerIn: parent }
                         onClicked: searchBar.replaceAll()
                     }
                 }
@@ -435,7 +440,7 @@ Item {
             visible: root.annotationsStale
             Layout.fillWidth: true
             Layout.preferredHeight: root.annotationsStale ? 30 : 0
-            color: "#fffbeb"
+            color: Theme.warningSoft
             border.color: "#fde68a"
             clip: true
 
@@ -443,8 +448,8 @@ Item {
                 anchors.fill: parent
                 anchors.leftMargin: 12
                 verticalAlignment: Text.AlignVCenter
-                text: "⚠ 文本已修改，OCR 标注可能已过期；重新识别可恢复框选对应关系"
-                color: "#92400e"
+                text: "文本已修改，OCR 标注可能已过期；重新识别可恢复框选对应关系"
+                color: Theme.warning
                 font.pixelSize: 11
                 elide: Text.ElideRight
             }
@@ -462,20 +467,20 @@ Item {
                 text: root.text
                 wrapMode: TextArea.Wrap
                 font.pixelSize: root.editorFontSize
-                font.family: "Microsoft YaHei UI, PingFang SC, Segoe UI, sans-serif"
-                color: "#1e293b"
-                topPadding: 16
+                font.family: "Microsoft YaHei UI"
+                color: Theme.ink
+                topPadding: 24
                 bottomPadding: 24
-                leftPadding: 18
-                rightPadding: 18
+                leftPadding: 26
+                rightPadding: 26
                 selectByMouse: true
                 persistentSelection: true
-                selectionColor: "#fef08a"
-                selectedTextColor: "#1d4ed8"
-                placeholderText: "暂无识别文本。\n\n点击上方【⚡ 识别本页】或【⚡⚡ 全篇识别】开始本地 OCR 识别。"
+                selectionColor: Theme.selection
+                selectedTextColor: Theme.accentHover
+                placeholderText: "暂无识别文本。\n\n点击上方「开始识别」，选择当前页或整篇手稿。"
 
                 background: Rectangle {
-                    color: "#ffffff"
+                    color: Theme.paper
                 }
 
                 // Keyboard shortcut: Ctrl + F toggle search
