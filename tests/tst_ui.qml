@@ -259,6 +259,19 @@ Item {
 
                 dialog.close();
             }
+
+            function test_toolbarContentSizing() {
+                let editor = findChild(preview.contentItem, "textEditor");
+                let searchButton = findChild(editor, "searchToggleButton");
+                let copyButton = findChild(editor, "copyTextButton");
+                verify(searchButton && copyButton);
+                verify(searchButton.contentItem.implicitWidth > 40,
+                       "The search action must size itself from its icon and label");
+                verify(copyButton.contentItem.implicitWidth > 40,
+                       "The copy action must size itself from its icon and label");
+                verify(searchButton.width >= searchButton.contentItem.implicitWidth);
+                verify(copyButton.width >= copyButton.contentItem.implicitWidth);
+            }
         }
     }
 }

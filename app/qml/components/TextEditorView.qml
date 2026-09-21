@@ -119,6 +119,7 @@ Item {
                 // Search toggle button
                 Button {
                     id: searchToggleButton
+                    objectName: "searchToggleButton"
                     Layout.preferredHeight: 26
                     background: Rectangle {
                         color: root.isSearchOpen ? Theme.accentSoft : (searchToggleButton.hovered ? Theme.surface : "transparent")
@@ -126,7 +127,10 @@ Item {
                         radius: 4
                     }
                     contentItem: Item {
+                        implicitWidth: searchToggleContent.implicitWidth
+                        implicitHeight: searchToggleContent.implicitHeight
                         Row {
+                            id: searchToggleContent
                             anchors.centerIn: parent
                             spacing: 4
                             Icon { name: "search"; size: 18; anchors.verticalCenter: parent.verticalCenter }
@@ -193,6 +197,7 @@ Item {
                 // Copy text button
                 Button {
                     id: copyTextButton
+                    objectName: "copyTextButton"
                     Layout.preferredHeight: 28
                     Layout.alignment: Qt.AlignVCenter
                     enabled: textArea.text.trim().length > 0
@@ -202,7 +207,10 @@ Item {
                         radius: 6
                     }
                     contentItem: Item {
+                        implicitWidth: copyTextContent.implicitWidth
+                        implicitHeight: copyTextContent.implicitHeight
                         Row {
+                            id: copyTextContent
                             anchors.centerIn: parent
                             spacing: 4
                             Icon { name: "copy"; size: 18; color: copyTextButton.enabled ? Theme.accent : Theme.muted; anchors.verticalCenter: parent.verticalCenter }

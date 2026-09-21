@@ -352,13 +352,17 @@ Dialog {
 
                 Button {
                     id: confirmExportButton
+                    objectName: "confirmExportButton"
                     height: 36
                     background: Rectangle {
                         color: confirmExportButton.hovered ? Theme.accentHover : Theme.accent
                         radius: 6
                     }
                     contentItem: Item {
+                        implicitWidth: exportContent.implicitWidth
+                        implicitHeight: exportContent.implicitHeight
                         Row {
+                            id: exportContent
                             anchors.centerIn: parent
                             spacing: 4
                             Icon { name: "download"; color: Theme.paper; size: 18; anchors.verticalCenter: parent.verticalCenter }
