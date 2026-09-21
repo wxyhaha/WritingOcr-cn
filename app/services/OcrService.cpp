@@ -133,7 +133,7 @@ void OcrService::startWorkerProcess() {
         setWorkerStatus(false, "远程 OCR 地址不可用，未启动本地 Worker");
         return;
     }
-    const quint16 workerPort = static_cast<quint16>(workerUrl.port(8766));
+    const quint16 workerPort = static_cast<quint16>(workerUrl.port(DefaultNetworkPorts::OcrWorker));
 
     // Check if another instance or process is already listening on the configured port.
     QTcpSocket testSock;

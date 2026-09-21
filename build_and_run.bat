@@ -85,11 +85,17 @@ if not defined PYTHON_EXE (
 
 :found_python_build
 echo.
-echo [1/3] Building C++ application...
-if not exist build (
-    cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+echo [1/4] Configuring Release build...
+cmake --preset windows-msvc-release
+if %errorlevel% neq 0 (
+    echo [ERROR] CMake configuration failed!
+    pause
+    exit /b %errorlevel%
 )
-cmake --build build --config Release
+
+echo.
+echo [2/3] Building and packaging C++ application...
+cmake --build --preset release
 if %errorlevel% neq 0 (
     echo [ERROR] Build failed!
     pause
@@ -97,11 +103,16 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [2/3] Checking OCR Worker...
+echo [3/3] Checking OCR Worker...
 echo OCR Worker will be started securely by the desktop application.
 set "PYTHON_EXECUTABLE=!PYTHON_EXE!"
 
 echo.
-echo [3/3] Launching Desktop App...
-start "" "%~dp0build\HandwritingOCR.exe"
+echo [4/4] Launching Desktop App from dist\HandwritingOCR...
+if not exist "%~dp0dist\HandwritingOCR\HandwritingOCR.exe" (
+    echo [ERROR] Packaged executable was not created.
+    pause
+    exit /b 1
+)
+start "" "%~dp0dist\HandwritingOCR\HandwritingOCR.exe"
 endlocal

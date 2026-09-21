@@ -88,7 +88,14 @@ if !errorlevel! neq 0 (
 echo [Env] Using Python: !PYTHON_EXE!
 set "PYTHON_EXECUTABLE=!PYTHON_EXE!"
 
-echo Launching Desktop Application...
-start "" "%~dp0build\HandwritingOCR.exe"
+if not exist "%~dp0dist\HandwritingOCR\HandwritingOCR.exe" (
+    echo [ERROR] Packaged application not found.
+    echo Please run build_and_run.bat first.
+    pause
+    exit /b 1
+)
+
+echo Launching Desktop Application from dist\HandwritingOCR...
+start "" "%~dp0dist\HandwritingOCR\HandwritingOCR.exe"
 
 endlocal

@@ -9,7 +9,7 @@ namespace HandwritingOCR {
 
 class PaddleOcrProvider : public IOcrProvider {
 public:
-    explicit PaddleOcrProvider(const QString& workerBaseUrl = "http://127.0.0.1:8766");
+    explicit PaddleOcrProvider(const QString& workerBaseUrl = "http://127.0.0.1:18766");
     ~PaddleOcrProvider() override = default;
 
     void setBaseUrl(const QString& url);

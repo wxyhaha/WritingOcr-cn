@@ -2,6 +2,7 @@
 #include "StorageService.h"
 #include "../infrastructure/database/DatabaseManager.h"
 #include "../infrastructure/logging/Logger.h"
+#include <QUrl>
 
 namespace HandwritingOCR {
 
@@ -23,11 +24,34 @@ void SettingsService::load() {
     }
     m_autoEnhance = db.getSetting("autoEnhance", "0") == "1";
     m_filterPrintedText = db.getSetting("filterPrintedText", "1") == "1";
-    m_ocrWorkerUrl = db.getSetting("ocrWorkerUrl", "http://127.0.0.1:8766");
+    const QString defaultOcrWorkerUrl =
+        QStringLiteral("http://127.0.0.1:%1").arg(DefaultNetworkPorts::OcrWorker);
+    m_ocrWorkerUrl = db.getSetting("ocrWorkerUrl", defaultOcrWorkerUrl);
+
+    // Older releases used ports reserved by Windows networking components.
+    // Migrate only loopback OCR URLs so an intentionally configured remote
+    // worker is left untouched.
+    QUrl configuredOcrUrl(m_ocrWorkerUrl);
+    const QString configuredHost = configuredOcrUrl.host().toLower();
+    const bool isLoopbackOcrHost = configuredHost == "127.0.0.1"
+        || configuredHost == "localhost"
+        || configuredHost == "::1";
+    if (configuredOcrUrl.isValid()
+        && isLoopbackOcrHost
+        && configuredOcrUrl.port() == DefaultNetworkPorts::LegacyOcrWorker) {
+        configuredOcrUrl.setPort(DefaultNetworkPorts::OcrWorker);
+        m_ocrWorkerUrl = configuredOcrUrl.toString();
+        db.setSetting("ocrWorkerUrl", m_ocrWorkerUrl);
+        Logger::instance().info("SettingsService", QString("Migrated local OCR worker URL to %1").arg(m_ocrWorkerUrl));
+    }
+
     m_lanUploadEnabled = db.getSetting("lanUploadEnabled", "1") == "1";
-    m_lanUploadPort = db.getSetting("lanUploadPort", "8765").toInt();
-    if (m_lanUploadPort <= 1024 || m_lanUploadPort > 65535) {
-        m_lanUploadPort = 8765;
+    m_lanUploadPort = db.getSetting("lanUploadPort", QString::number(DefaultNetworkPorts::LanUpload)).toInt();
+    if (m_lanUploadPort <= 1024 || m_lanUploadPort > 65535
+        || m_lanUploadPort == DefaultNetworkPorts::LegacyLanUpload) {
+        m_lanUploadPort = DefaultNetworkPorts::LanUpload;
+        db.setSetting("lanUploadPort", QString::number(m_lanUploadPort));
+        Logger::instance().info("SettingsService", QString("Migrated LAN upload port to %1").arg(m_lanUploadPort));
     }
     m_storageDir = db.getSetting("storageDir", StorageService::instance().getBaseStorageDir());
     if (!m_storageDir.trimmed().isEmpty()

@@ -37,7 +37,7 @@
 │  - IExporter (TxtExporter, MarkdownExporter, DocxExporter)  │
 │  - Logger (Thread-safe File & Console Log)                  │
 └──────────────────────────────┬──────────────────────────────┘
-                               │ HTTP / JSON (127.0.0.1:8766)
+                               │ HTTP / JSON (127.0.0.1:18766)
 ┌──────────────────────────────▼──────────────────────────────┐
 │                      OCR Worker (Python)                    │
 │  - FastAPI Server (/health, /capabilities, /ocr)            │

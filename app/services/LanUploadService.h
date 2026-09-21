@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../infrastructure/network/LanHttpServer.h"
+#include "SettingsService.h"
 #include <QObject>
 #include <QString>
 #include <QStringList>
@@ -23,7 +24,7 @@ public:
     static LanUploadService& instance();
 
     void init();
-    bool startServer(int port = 8765);
+    bool startServer(int port = DefaultNetworkPorts::LanUpload);
     void stopServer();
 
     bool isRunning() const { return m_server && m_server->isListening(); }
@@ -65,7 +66,7 @@ private:
     LanHttpServer* m_server = nullptr;
     QString m_lanIp = "127.0.0.1";
     QStringList m_availableIps;
-    int m_port = 8765;
+    int m_port = DefaultNetworkPorts::LanUpload;
     QString m_sessionToken;
     QString m_qrCodeDataUrl;
     int m_receivedCount = 0;

@@ -33,14 +33,20 @@ pip install -r requirements.txt
 call "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
 
 # 2. CMake 配置（若 Qt 已加入 PATH，则无需手动指定 CMAKE_PREFIX_PATH）
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --preset windows-msvc-release
 
 # 3. 执行编译
-cmake --build build --config Release
+cmake --build --preset release
 
-# 4. (可选) 部署 Qt 运行时依赖
-windeployqt --qmldir app/qml build/HandwritingOCR.exe
 ```
+
+构建完成后，最终可运行目录为：
+
+```text
+dist/HandwritingOCR/
+```
+
+其中包含 `HandwritingOCR.exe`、Qt 运行库、QML 模块、OCR Worker 和局域网上传页面。`build/release/` 是 CMake 构建目录，不作为发布目录。
 
 ---
 
@@ -50,8 +56,8 @@ windeployqt --qmldir app/qml build/HandwritingOCR.exe
 
 ```powershell
 # 编译并运行全部单元测试
-cmake --build build --target test_storage_db test_exporters
-ctest --test-dir build --output-on-failure
+cmake --build --preset release
+ctest --test-dir build/release --output-on-failure
 ```
 
 测试覆盖内容：
@@ -65,7 +71,7 @@ ctest --test-dir build --output-on-failure
 ### 方式 A：一键启动（桌面端自动拉起 OCR Worker）
 桌面程序启动时会自动检测并在后台拉起 `python ocr-worker/main.py`。
 ```powershell
-./build/HandwritingOCR.exe
+./dist/HandwritingOCR/HandwritingOCR.exe
 ```
 
 ### 方式 B：手动分别启动（推荐调试使用）
@@ -73,11 +79,11 @@ ctest --test-dir build --output-on-failure
 ```powershell
 python ocr-worker/main.py
 ```
-访问 `http://127.0.0.1:8766/docs` 可查看交互式 API 文档。
+访问 `http://127.0.0.1:18766/docs` 可查看交互式 API 文档。
 
 **终端 2 (桌面端)**:
 ```powershell
-./build/HandwritingOCR.exe
+./dist/HandwritingOCR/HandwritingOCR.exe
 ```
 
 ---
@@ -85,7 +91,7 @@ python ocr-worker/main.py
 ## 6. 常见问题 (FAQ)
 
 1. **Q: 局域网手机无法访问上传页面？**
-   - A: 请检查手机和电脑是否连接在同一个 WiFi 局域网下；检查 Windows 防火墙是否允许端口 8765 访问。
+   - A: 请检查手机和电脑是否连接在同一个 WiFi 局域网下；检查 Windows 防火墙是否允许端口 18765 访问。
 2. **Q: OCR 识别返回超时？**
    - A: 初次运行时 PaddleOCR 需要从官方源下载模型，模型下载完成后后续识别将非常迅速。可在 OCR 设置界面点击「检测」查看当前状态。
 3. **Q: 如何修改低置信度黄色高亮判定阈值？**

@@ -80,6 +80,14 @@ set(SOURCES
 
 add_executable(HandwritingOCR ${SOURCES})
 
+# Keep the CMake build tree separate from the portable runtime package.
+set(HANDWRITING_PACKAGE_DIR "${CMAKE_SOURCE_DIR}/dist/HandwritingOCR")
+set_target_properties(HandwritingOCR PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${HANDWRITING_PACKAGE_DIR}"
+    LIBRARY_OUTPUT_DIRECTORY "${HANDWRITING_PACKAGE_DIR}"
+    ARCHIVE_OUTPUT_DIRECTORY "${HANDWRITING_PACKAGE_DIR}"
+)
+
 target_link_libraries(HandwritingOCR PRIVATE
     Qt6::Core
     Qt6::Gui
@@ -115,10 +123,12 @@ if(WIN32)
     find_program(QMLTESTRUNNER_EXECUTABLE qmltestrunner HINTS "${QT_BIN_DIRECTORY}")
     if(QMLTESTRUNNER_EXECUTABLE)
         add_test(NAME test_ui
-            COMMAND "${QMLTESTRUNNER_EXECUTABLE}" -platform offscreen
+            COMMAND "${CMAKE_COMMAND}" -E env
+                "QT_QUICK_CONTROLS_STYLE=Basic"
+                "PATH=${QT_BIN_DIRECTORY};$ENV{PATH}"
+                "${QMLTESTRUNNER_EXECUTABLE}" -platform offscreen
                 -input "${CMAKE_CURRENT_SOURCE_DIR}/tests/tst_ui.qml")
         set_tests_properties(test_ui PROPERTIES
-            ENVIRONMENT "QT_QUICK_CONTROLS_STYLE=Basic"
             TIMEOUT 30)
     endif()
 endif()
@@ -133,7 +143,14 @@ add_executable(test_storage_db
     app/models/OcrBlockListModel.cpp
 )
 target_link_libraries(test_storage_db PRIVATE Qt6::Core Qt6::Sql)
-add_test(NAME test_storage_db COMMAND test_storage_db)
+if(WIN32)
+    add_test(NAME test_storage_db
+        COMMAND "${CMAKE_COMMAND}" -E env
+            "PATH=${QT_BIN_DIRECTORY};$ENV{PATH}"
+            "$<TARGET_FILE:test_storage_db>")
+else()
+    add_test(NAME test_storage_db COMMAND test_storage_db)
+endif()
 
 add_executable(test_exporters
     tests/test_exporters.cpp
@@ -143,7 +160,14 @@ add_executable(test_exporters
     app/infrastructure/logging/Logger.cpp
 )
 target_link_libraries(test_exporters PRIVATE Qt6::Core)
-add_test(NAME test_exporters COMMAND test_exporters)
+if(WIN32)
+    add_test(NAME test_exporters
+        COMMAND "${CMAKE_COMMAND}" -E env
+            "PATH=${QT_BIN_DIRECTORY};$ENV{PATH}"
+            "$<TARGET_FILE:test_exporters>")
+else()
+    add_test(NAME test_exporters COMMAND test_exporters)
+endif()
 
 add_executable(test_image_service
     tests/test_image_service.cpp
@@ -152,7 +176,14 @@ add_executable(test_image_service
     app/infrastructure/logging/Logger.cpp
 )
 target_link_libraries(test_image_service PRIVATE Qt6::Core Qt6::Gui)
-add_test(NAME test_image_service COMMAND test_image_service)
+if(WIN32)
+    add_test(NAME test_image_service
+        COMMAND "${CMAKE_COMMAND}" -E env
+            "PATH=${QT_BIN_DIRECTORY};$ENV{PATH}"
+            "$<TARGET_FILE:test_image_service>")
+else()
+    add_test(NAME test_image_service COMMAND test_image_service)
+endif()
 
 if(WIN32 AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.venv/Scripts/python.exe")
     set(Python3_EXECUTABLE "${CMAKE_CURRENT_SOURCE_DIR}/.venv/Scripts/python.exe")

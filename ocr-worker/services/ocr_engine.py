@@ -203,6 +203,9 @@ class OCREngine:
         self.is_ready = False
         self._ready_event = threading.Event()
         self._inference_lock = threading.Lock()
+        self._paddle_version = "none"
+        self._paddleocr_version = "none"
+        self._paddlex_version = "none"
         
         # Asynchronous background model warmup so HTTP server starts instantly (<0.2s)
         self._warmup_thread = threading.Thread(target=self._init_engine, daemon=True)
@@ -212,7 +215,10 @@ class OCREngine:
         try:
             logger.info("Starting background PaddleOCR PP-OCRv5 engine warmup...")
             try:
+                import paddle
+                self._paddle_version = getattr(paddle, "__version__", "unknown")
                 import paddlex
+                self._paddlex_version = getattr(paddlex, "__version__", "unknown")
             except ImportError:
                 raise RuntimeError(
                     "未检测到高精度 PaddleX 运行库 (缺少 paddlex==3.7.2)。"
@@ -220,6 +226,7 @@ class OCREngine:
                 )
 
             from paddleocr import PaddleOCR
+            self._paddleocr_version = getattr(__import__("paddleocr"), "__version__", "unknown")
             self.ocr = PaddleOCR(
                 lang="ch",
                 use_doc_orientation_classify=False,
@@ -243,25 +250,6 @@ class OCREngine:
             self._ready_event.set()
 
     def check_health(self) -> Dict[str, Any]:
-        paddlex_ver = "none"
-        paddleocr_ver = "none"
-        paddle_ver = "none"
-        try:
-            import paddle
-            paddle_ver = getattr(paddle, "__version__", "unknown")
-        except Exception:
-            pass
-        try:
-            import paddleocr
-            paddleocr_ver = getattr(paddleocr, "__version__", "unknown")
-        except Exception:
-            pass
-        try:
-            import paddlex
-            paddlex_ver = getattr(paddlex, "__version__", "unknown")
-        except Exception:
-            pass
-
         if self.is_ready:
             status = "ready"
         elif not self._ready_event.is_set():
@@ -273,9 +261,9 @@ class OCREngine:
             "status": status,
             "engine": self.engine_name,
             "engine_version": self.engine_version,
-            "paddle_version": paddle_ver,
-            "paddleocr_version": paddleocr_ver,
-            "paddlex_version": paddlex_ver,
+            "paddle_version": self._paddle_version,
+            "paddleocr_version": self._paddleocr_version,
+            "paddlex_version": self._paddlex_version,
             "error_detail": getattr(self, "_init_error", None) if not self.is_ready else None,
             "gpu_available": self.gpu_available,
             "is_ready": self.is_ready

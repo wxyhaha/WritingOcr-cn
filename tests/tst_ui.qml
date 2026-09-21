@@ -124,13 +124,13 @@ Item {
             property bool filterPrintedText: true
             property bool autoEnhance: false
             property real lowConfidenceThreshold: 0.75
-            property string ocrWorkerUrl: "http://127.0.0.1:8766"
+            property string ocrWorkerUrl: "http://127.0.0.1:18766"
         }
         QtObject {
             id: lan
             property var availableLanIps: ["127.0.0.1"]
             property string lanIp: "127.0.0.1"
-            property string uploadUrl: "http://127.0.0.1:8765"
+            property string uploadUrl: "http://127.0.0.1:18765"
             property string qrCodeDataUrl: ""
             property int receivedImageCount: 0
             function refreshSessionToken() {

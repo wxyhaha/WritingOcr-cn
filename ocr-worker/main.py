@@ -113,7 +113,7 @@ def ocr_batch(req: OcrBatchRequest, x_ocr_token: Optional[str] = Header(default=
     return {"results": results}
 
 if __name__ == "__main__":
-    port = int(os.environ.get("OCR_PORT", 8766))
+    port = int(os.environ.get("OCR_PORT", 18766))
     host = os.environ.get("OCR_HOST", "127.0.0.1")
     logger.info(f"Starting OCR Worker on http://{host}:{port}")
     uvicorn.run(app, host=host, port=port, log_level="info")

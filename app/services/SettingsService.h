@@ -5,6 +5,16 @@
 
 namespace HandwritingOCR {
 
+namespace DefaultNetworkPorts {
+inline constexpr int OcrWorker = 18766;
+inline constexpr int LanUpload = 18765;
+
+// Ports used by versions before the Windows reserved-port fix. Existing
+// local settings using these values are migrated on the next startup.
+inline constexpr int LegacyOcrWorker = 8766;
+inline constexpr int LegacyLanUpload = 8765;
+}
+
 class SettingsService : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString ocrEngine READ ocrEngine WRITE setOcrEngine NOTIFY settingsChanged)
@@ -62,9 +72,9 @@ private:
     double m_lowConfidenceThreshold = 0.75;
     bool m_autoEnhance = false;
     bool m_filterPrintedText = true;
-    QString m_ocrWorkerUrl = "http://127.0.0.1:8766";
+    QString m_ocrWorkerUrl = QStringLiteral("http://127.0.0.1:18766");
     bool m_lanUploadEnabled = true;
-    int m_lanUploadPort = 8765;
+    int m_lanUploadPort = DefaultNetworkPorts::LanUpload;
     QString m_storageDir;
     QString m_theme = "Light";
 };

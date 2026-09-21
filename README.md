@@ -56,18 +56,16 @@ pip install -r requirements.txt
 call "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
 
 # 2. 配置 CMake（若 Qt6 已在 PATH 中则无需指定前缀）
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --preset windows-msvc-release
 
 # 3. 编译工程
-cmake --build build --config Release
+cmake --build --preset release
 
 # 4. (可选) 运行自动化测试验证
-cd build
-ctest --output-on-failure
-cd ..
+ctest --test-dir build/release --output-on-failure
 ```
 
-> **提示**：CMake 构建成功后，会自动触发 `POST_BUILD` 脚本将 `ocr-worker/`、`web-upload/`、`scripts/` 自动拷贝至输出目录 `build/` 中。
+> **提示**：CMake 构建成功后，会自动将 Qt 运行库、`ocr-worker/`、`web-upload/`、`scripts/` 拷贝至最终可运行目录 `dist/HandwritingOCR/`。`build/release/` 仅保存 CMake 构建缓存和测试产物。
 
 ---
 
@@ -78,7 +76,7 @@ cd ..
 .\start.bat
 
 # 方式 B：直接运行编译产物
-.\build\HandwritingOCR.exe
+.\dist\HandwritingOCR\HandwritingOCR.exe
 ```
 
 ---
@@ -86,7 +84,7 @@ cd ..
 ## 🛠️ 常见问题排查 (FAQ)
 
 1. **OCR Worker 端口冲突或启动失败**：
-   - 默认 OCR 端口为 `8766`，局域网扫码端口为 `8765`。
+   - 默认 OCR 端口为 `18766`，局域网扫码端口为 `18765`，避开 Windows 常见系统保留端口范围。
    - 可以在桌面端右上角【⚙️ 设置】中检测 OCR 服务健康状态，或自定义端口。
 2. **局域网手机扫码无法打开上传页面**：
    - 请确保手机与电脑连接在同一个 WiFi 局域网下；
