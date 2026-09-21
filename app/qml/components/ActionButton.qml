@@ -5,6 +5,7 @@ import "Theme.js" as Theme
 Button {
     id: control
     property string iconName: ""
+    property string trailingIconName: ""
     property bool primary: false
     property bool quiet: false
     implicitHeight: 36
@@ -28,7 +29,7 @@ Button {
         Row {
             id: label
             anchors.centerIn: parent
-            spacing: control.text && control.iconName ? 7 : 0
+            spacing: control.text && (control.iconName || control.trailingIconName) ? 7 : 0
             Icon {
                 visible: control.iconName !== ""
                 name: control.iconName
@@ -39,6 +40,13 @@ Button {
                 text: control.text
                 font: control.font
                 color: control.primary ? Theme.paper : Theme.ink
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            Icon {
+                visible: control.trailingIconName !== ""
+                name: control.trailingIconName
+                size: 14
+                color: control.primary ? Theme.paper : Theme.secondary
                 anchors.verticalCenter: parent.verticalCenter
             }
         }

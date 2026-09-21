@@ -22,9 +22,12 @@ Button {
         border.color: Theme.accent
         Behavior on color { ColorAnimation { duration: 100 } }
     }
-    contentItem: Icon {
-        name: control.iconName
-        size: 16
-        color: control.destructive && (control.hovered || control.down) ? Theme.paper : Theme.secondary
+    contentItem: Item {
+        Icon {
+            anchors.centerIn: parent
+            name: control.iconName
+            size: 16
+            color: control.destructive && (control.hovered || control.down) ? Theme.paper : Theme.secondary
+        }
     }
 }

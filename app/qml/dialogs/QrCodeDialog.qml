@@ -67,7 +67,9 @@ Dialog {
                         color: closeQrButton.hovered ? Theme.surface : "transparent"
                         radius: 16
                     }
-                    contentItem: Icon { name: "close"; color: Theme.secondary; size: 18; anchors.centerIn: parent }
+                    contentItem: Item {
+                        Icon { name: "close"; color: Theme.secondary; size: 18; anchors.centerIn: parent }
+                    }
                     onClicked: root.close()
                 }
             }
@@ -125,7 +127,7 @@ Dialog {
                     color: Theme.secondary
                 }
 
-                ComboBox {
+                SelectField {
                     id: ipComboBox
                     Layout.fillWidth: true
                     model: root.appController.lanUploadService.availableLanIps
@@ -162,7 +164,7 @@ Dialog {
                         id: copyUploadUrlButton
                         Layout.preferredHeight: 28
                         background: Rectangle {
-                            color: copyUploadUrlButton.hovered ? Theme.accentSoft : Theme.accentSoft
+                            color: copyUploadUrlButton.down ? Theme.accentBorder : Theme.accentSoft
                             border.color: Theme.accentBorder
                             radius: 6
                         }
@@ -171,7 +173,8 @@ Dialog {
                             font.pixelSize: 11
                             font.bold: true
                             color: Theme.accentHover
-                            anchors.centerIn: parent
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
                         }
                         onClicked: {
                             root.appController.copyToClipboard(root.appController.lanUploadService.uploadUrl);
@@ -190,7 +193,8 @@ Dialog {
                             text: "刷新"
                             font.pixelSize: 11
                             color: Theme.secondary
-                            anchors.centerIn: parent
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
                         }
                         onClicked: root.appController.lanUploadService.refreshSessionToken()
                     }
@@ -269,7 +273,8 @@ Dialog {
                     color: Theme.secondary
                     font.bold: true
                     font.pixelSize: 12
-                    anchors.centerIn: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
                 onClicked: root.close()
             }

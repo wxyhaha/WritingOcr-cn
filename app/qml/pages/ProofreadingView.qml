@@ -95,7 +95,24 @@ Item {
         modal: true
         anchors.centerIn: parent
         width: Math.min(420, Math.max(340, parent.width - 32))
-        standardButtons: Dialog.Ok | Dialog.Cancel
+        height: Math.min(260, Math.max(230, parent.height - 32))
+        padding: 0
+
+        background: Rectangle {
+            color: Theme.paper
+            radius: 16
+            border.color: Theme.border
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -4
+                color: "transparent"
+                border.color: "#1e293b14"
+                radius: 20
+                z: -1
+            }
+        }
+
         onAccepted: {
             if (root.pendingDeletePageIndex >= 0) {
                 root.appController.taskService.deletePage(root.pendingDeletePageIndex);
@@ -104,21 +121,149 @@ Item {
         }
         onRejected: root.pendingDeletePageIndex = -1
 
-        contentItem: ColumnLayout {
-            spacing: 10
-            Text {
-                text: "确定删除当前页面吗？"
-                font.bold: true
-                font.pixelSize: 14
-                color: Theme.ink
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 0
+
+            Rectangle {
                 Layout.fillWidth: true
+                Layout.preferredHeight: 54
+                color: Theme.paper
+                radius: 16
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 20
+                    anchors.rightMargin: 16
+
+                    Row {
+                        spacing: 8
+                        Layout.alignment: Qt.AlignVCenter
+                        Icon { name: "warning"; size: 18; color: Theme.warning }
+                        Text { text: "删除页面"; font.bold: true; font.pixelSize: 15; color: Theme.ink }
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    Button {
+                        id: closeDeletePageButton
+                        Layout.preferredWidth: 30
+                        Layout.preferredHeight: 30
+                        background: Rectangle {
+                            color: closeDeletePageButton.hovered ? Theme.surface : "transparent"
+                            radius: 15
+                        }
+                        contentItem: Item {
+                            Icon { name: "close"; color: Theme.secondary; size: 18; anchors.centerIn: parent }
+                        }
+                        Accessible.name: "关闭删除页面对话框"
+                        onClicked: deletePageDialog.reject()
+                    }
+                }
+
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    height: 1
+                    color: Theme.border
+                }
             }
-            Text {
-                text: "页面图片、OCR 结果和校对文本都会从当前任务中移除，此操作不可撤销。"
-                font.pixelSize: 12
-                color: Theme.secondary
-                wrapMode: Text.Wrap
+
+            ColumnLayout {
                 Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.margins: 20
+                spacing: 10
+
+                Text {
+                    text: "确定删除当前页面吗？"
+                    font.bold: true
+                    font.pixelSize: 14
+                    color: Theme.ink
+                    Layout.fillWidth: true
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    color: Theme.warningSoft
+                    border.color: "#ead7a7"
+                    radius: 8
+
+                    Text {
+                        anchors.fill: parent
+                        anchors.margins: 12
+                        text: "页面图片、OCR 结果和校对文本都会从当前任务中移除，此操作不可撤销。"
+                        font.pixelSize: 12
+                        color: Theme.warning
+                        wrapMode: Text.Wrap
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 56
+                color: Theme.paper
+                radius: 16
+
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    height: 1
+                    color: Theme.border
+                }
+
+                Row {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 20
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 10
+
+                    Button {
+                        id: cancelDeletePageButton
+                        width: 80
+                        height: 36
+                        background: Rectangle {
+                            color: cancelDeletePageButton.hovered ? Theme.border : Theme.surface
+                            border.color: Theme.border
+                            radius: 6
+                        }
+                        contentItem: Text {
+                            text: "取消"
+                            color: Theme.secondary
+                            font.pixelSize: 12
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        Accessible.name: "取消删除页面"
+                        onClicked: deletePageDialog.reject()
+                    }
+
+                    Button {
+                        id: confirmDeletePageButton
+                        width: 96
+                        height: 36
+                        background: Rectangle {
+                            color: confirmDeletePageButton.hovered ? Theme.danger : "#c05a4f"
+                            radius: 6
+                        }
+                        contentItem: Item {
+                            Row {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                Icon { name: "trash"; color: Theme.paper; size: 17; anchors.verticalCenter: parent.verticalCenter }
+                                Text { text: "删除页面"; color: Theme.paper; font.bold: true; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+                            }
+                        }
+                        Accessible.name: "确认删除页面"
+                        onClicked: deletePageDialog.accept()
+                    }
+                }
             }
         }
     }
@@ -170,8 +315,38 @@ Item {
                     }
                     CheckBox {
                         id: filterPrintedCheck
+                        objectName: "filterPrintedCheck"
                         text: "过滤印刷体"
                         checked: root.appController.settingsService.filterPrintedText
+                        implicitHeight: 34
+                        spacing: 8
+                        padding: 0
+                        indicator: Rectangle {
+                            width: 22
+                            height: 22
+                            implicitWidth: 22
+                            implicitHeight: 22
+                            radius: 5
+                            color: filterPrintedCheck.checked ? Theme.accent : Theme.paper
+                            border.width: filterPrintedCheck.visualFocus ? 2 : 1
+                            border.color: filterPrintedCheck.checked ? Theme.accent : Theme.border
+
+                            Icon {
+                                visible: filterPrintedCheck.checked
+                                anchors.centerIn: parent
+                                name: "check"
+                                size: 15
+                                color: Theme.paper
+                            }
+                        }
+                        contentItem: Text {
+                            text: filterPrintedCheck.text
+                            color: Theme.secondary
+                            font.pixelSize: 12
+                            leftPadding: filterPrintedCheck.indicator.width + filterPrintedCheck.spacing
+                            horizontalAlignment: Text.AlignLeft
+                            verticalAlignment: Text.AlignVCenter
+                        }
                         onToggled: {
                             root.appController.settingsService.filterPrintedText = checked;
                             root.appController.taskService.applyFilterPrintedToCurrentPage(checked);
@@ -182,19 +357,40 @@ Item {
                         objectName: "recognizeButton"
                         text: root.appController.ocrService.isProcessing ? "正在识别" : "开始识别"
                         iconName: "scan"
+                        trailingIconName: root.appController.ocrService.isProcessing ? "" : "down"
                         primary: true
                         enabled: !root.appController.ocrService.isProcessing && root.appController.taskService.currentTaskPageCount > 0
                         onClicked: recognitionMenu.open()
                         Menu {
                             id: recognitionMenu
                             objectName: "recognitionMenu"
-                            y: recognizeButton.height + 4
-                            MenuItem {
+                            x: 0
+                            y: recognizeButton.height + 6
+                            width: 188
+                            padding: 6
+                            font.family: "Microsoft YaHei UI"
+                            font.pixelSize: 13
+                            background: Rectangle {
+                                color: Theme.paper
+                                border.color: Theme.border
+                                radius: 9
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    anchors.margins: 1
+                                    color: "transparent"
+                                    border.color: "#1e293b10"
+                                    radius: 8
+                                }
+                            }
+                            MenuActionItem {
+                                iconName: "document"
                                 text: "识别当前页"
                                 enabled: root.appController.taskService.currentPageIndex >= 0
                                 onTriggered: root.appController.ocrService.recognizeCurrentPage()
                             }
-                            MenuItem {
+                            MenuActionItem {
+                                iconName: "scan"
                                 text: "识别整篇手稿"
                                 onTriggered: root.appController.ocrService.recognizeCurrentTask()
                             }
@@ -219,7 +415,9 @@ Item {
 
                 Rectangle {
                     height: parent.height
-                    width: root.appController.ocrService.totalProgress > 0 ? (parent.width * root.appController.ocrService.currentProgress / root.appController.ocrService.totalProgress) : (parent.width * 0.4)
+                    width: root.appController.ocrService.totalProgress > 0
+                           ? parent.width * Math.max(0, Math.min(1, root.appController.ocrService.currentProgress / root.appController.ocrService.totalProgress))
+                           : (parent.width * 0.4)
                     color: Theme.accent
                 }
             }
@@ -310,7 +508,7 @@ Item {
                 Rectangle {
                     id: progressHud
                     visible: root.appController.ocrService.isProcessing
-                    width: 380
+                    width: Math.min(380, Math.max(280, parent.width - 32))
                     height: 64
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.top: parent.top
@@ -339,6 +537,21 @@ Item {
                             running: root.appController.ocrService.isProcessing
                             Layout.preferredWidth: 32
                             Layout.preferredHeight: 32
+                            contentItem: Item {
+                                Icon {
+                                    anchors.centerIn: parent
+                                    name: "scan"
+                                    size: 26
+                                    color: Theme.accent
+                                    RotationAnimation on rotation {
+                                        from: 0
+                                        to: 360
+                                        duration: 900
+                                        loops: Animation.Infinite
+                                        running: root.appController.ocrService.isProcessing
+                                    }
+                                }
+                            }
                         }
 
                         ColumnLayout {
@@ -369,6 +582,21 @@ Item {
                                 from: 0
                                 to: Math.max(1, root.appController.ocrService.totalProgress)
                                 value: root.appController.ocrService.currentProgress
+                                background: Rectangle {
+                                    implicitHeight: 4
+                                    height: 4
+                                    radius: 2
+                                    color: Theme.border
+                                }
+                                contentItem: Item {
+                                    Rectangle {
+                                        width: parent.width * Math.max(0, Math.min(1, progressHudProgress.value / progressHudProgress.to))
+                                        height: parent.height
+                                        radius: 2
+                                        color: Theme.accent
+                                    }
+                                }
+                                id: progressHudProgress
                             }
                         }
 
@@ -384,7 +612,8 @@ Item {
                                 text: "取消"
                                 font.pixelSize: 11
                                 color: "#b91c1c"
-                                anchors.centerIn: parent
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
                             }
                             onClicked: root.appController.ocrService.cancelRecognition()
                         }
@@ -395,15 +624,15 @@ Item {
             // Bottom Status Bar
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 36
+                Layout.preferredHeight: 42
                 color: Theme.paper
                 border.color: Theme.border
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 16
-                    anchors.rightMargin: 16
-                    spacing: 12
+                    anchors.leftMargin: 18
+                    anchors.rightMargin: 18
+                    spacing: 10
 
                     Text {
                         text: `${Math.max(0, root.appController.taskService.currentPageIndex + 1)} / ${root.appController.taskService.currentTaskPageCount} 页`
@@ -411,17 +640,38 @@ Item {
                         color: Theme.secondary
                     }
 
+                    Rectangle {
+                        Layout.preferredWidth: 1
+                        Layout.preferredHeight: 14
+                        color: Theme.border
+                    }
+
                     Text {
-                        text: `|  总字数: ${root.appController.taskService.currentEditedText.length}`
+                        text: `总字数 ${root.appController.taskService.currentEditedText.length}`
                         font.pixelSize: 12
                         color: Theme.secondary
                     }
 
-                    Text {
-                        text: `|  低置信度: ${root.appController.ocrBlockListModel.lowConfidenceCount} 处`
-                        font.pixelSize: 12
-                        color: root.appController.ocrBlockListModel.lowConfidenceCount > 0 ? Theme.warning : Theme.secondary
-                        font.bold: root.appController.ocrBlockListModel.lowConfidenceCount > 0
+                    Rectangle {
+                        Layout.preferredWidth: 1
+                        Layout.preferredHeight: 14
+                        color: Theme.border
+                    }
+
+                    RowLayout {
+                        spacing: 5
+
+                        Icon {
+                            name: "warning"
+                            size: 14
+                            color: root.appController.ocrBlockListModel.lowConfidenceCount > 0 ? Theme.warning : Theme.muted
+                        }
+                        Text {
+                            text: `低置信度 ${root.appController.ocrBlockListModel.lowConfidenceCount} 处`
+                            font.pixelSize: 12
+                            color: root.appController.ocrBlockListModel.lowConfidenceCount > 0 ? Theme.warning : Theme.secondary
+                            font.bold: root.appController.ocrBlockListModel.lowConfidenceCount > 0
+                        }
                     }
 
 
@@ -429,20 +679,38 @@ Item {
 
                     // Low confidence jump buttons
                     Button {
+                        id: previousLowConfidenceButton
                         text: "上一处疑点"
+                        implicitWidth: 88
                         Layout.preferredHeight: 28
+                        padding: 0
+                        hoverEnabled: true
                         enabled: root.appController.ocrBlockListModel.lowConfidenceCount > 0
                         background: Rectangle {
-                            color: parent.enabled ? Theme.warningSoft : Theme.surface
-                            border.color: parent.enabled ? "#fde68a" : Theme.border
-                            radius: 4
+                            color: !previousLowConfidenceButton.enabled ? Theme.surface
+                                   : previousLowConfidenceButton.down || previousLowConfidenceButton.hovered
+                                   ? Theme.warningSoft : Theme.paper
+                            border.color: previousLowConfidenceButton.enabled ? "#e7c76b" : Theme.border
+                            radius: 7
                         }
-                        contentItem: Text {
-                            text: "上一处疑点"
-                            color: parent.enabled ? Theme.warning : Theme.muted
-                            font.pixelSize: 11
-                            font.bold: true
-                            anchors.centerIn: parent
+                        contentItem: Item {
+                            Row {
+                                anchors.centerIn: parent
+                                spacing: 5
+                                Icon {
+                                    name: "up"
+                                    size: 13
+                                    color: previousLowConfidenceButton.enabled ? Theme.warning : Theme.muted
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                Text {
+                                    text: previousLowConfidenceButton.text
+                                    color: previousLowConfidenceButton.enabled ? Theme.warning : Theme.muted
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
                         }
                         onClicked: {
                             let cur = root.appController.ocrBlockListModel.selectedIndex;
@@ -456,20 +724,38 @@ Item {
                     }
 
                     Button {
+                        id: nextLowConfidenceButton
                         text: "下一处疑点"
+                        implicitWidth: 88
                         Layout.preferredHeight: 28
+                        padding: 0
+                        hoverEnabled: true
                         enabled: root.appController.ocrBlockListModel.lowConfidenceCount > 0
                         background: Rectangle {
-                            color: parent.enabled ? Theme.warningSoft : Theme.surface
-                            border.color: parent.enabled ? "#fde68a" : Theme.border
-                            radius: 4
+                            color: !nextLowConfidenceButton.enabled ? Theme.surface
+                                   : nextLowConfidenceButton.down || nextLowConfidenceButton.hovered
+                                   ? Theme.warningSoft : Theme.paper
+                            border.color: nextLowConfidenceButton.enabled ? "#e7c76b" : Theme.border
+                            radius: 7
                         }
-                        contentItem: Text {
-                            text: "下一处疑点"
-                            color: parent.enabled ? Theme.warning : Theme.muted
-                            font.pixelSize: 11
-                            font.bold: true
-                            anchors.centerIn: parent
+                        contentItem: Item {
+                            Row {
+                                anchors.centerIn: parent
+                                spacing: 5
+                                Icon {
+                                    name: "down"
+                                    size: 13
+                                    color: nextLowConfidenceButton.enabled ? Theme.warning : Theme.muted
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                Text {
+                                    text: nextLowConfidenceButton.text
+                                    color: nextLowConfidenceButton.enabled ? Theme.warning : Theme.muted
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
                         }
                         onClicked: {
                             let cur = root.appController.ocrBlockListModel.selectedIndex;

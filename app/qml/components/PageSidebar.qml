@@ -88,7 +88,8 @@ Item {
                         color: addPagesButton.enabled ? Theme.secondary : Theme.muted
                         font.pixelSize: 11
                         font.bold: true
-                        anchors.centerIn: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                     }
                     onClicked: root.addPagesRequested()
                     ToolTip.visible: hovered && !enabled
@@ -219,11 +220,13 @@ Item {
                                 border.color: moveUpButton.enabled ? Theme.accentBorder : Theme.border
                                 radius: 5
                             }
-                            contentItem: Icon {
-                                name: "up"
-                                color: moveUpButton.enabled ? Theme.accent : Theme.border
-                                size: 18
-                                anchors.centerIn: parent
+                            contentItem: Item {
+                                Icon {
+                                    name: "up"
+                                    color: moveUpButton.enabled ? Theme.accent : Theme.border
+                                    size: 18
+                                    anchors.centerIn: parent
+                                }
                             }
                             Accessible.name: `上移第 ${pageDelegate.index + 1} 页`
                             ToolTip.visible: hovered
@@ -242,11 +245,13 @@ Item {
                                 border.color: moveDownButton.enabled ? Theme.accentBorder : Theme.border
                                 radius: 5
                             }
-                            contentItem: Icon {
-                                name: "down"
-                                color: moveDownButton.enabled ? Theme.accent : Theme.border
-                                size: 18
-                                anchors.centerIn: parent
+                            contentItem: Item {
+                                Icon {
+                                    name: "down"
+                                    color: moveDownButton.enabled ? Theme.accent : Theme.border
+                                    size: 18
+                                    anchors.centerIn: parent
+                                }
                             }
                             Accessible.name: `下移第 ${pageDelegate.index + 1} 页`
                             ToolTip.visible: hovered
@@ -270,11 +275,13 @@ Item {
                             border.color: "#fca5a5"
                             radius: 11
                         }
-                        contentItem: Icon {
-                            name: "close"
-                            color: Theme.danger
-                            size: 18
-                            anchors.centerIn: parent
+                        contentItem: Item {
+                            Icon {
+                                name: "close"
+                                color: Theme.danger
+                                size: 18
+                                anchors.centerIn: parent
+                            }
                         }
                         onClicked: root.pageDeleted(pageDelegate.index)
                         ToolTip.visible: hovered

@@ -64,7 +64,9 @@ Dialog {
                         color: closeExportButton.hovered ? Theme.surface : "transparent"
                         radius: 16
                     }
-                    contentItem: Icon { name: "close"; color: Theme.secondary; size: 18; anchors.centerIn: parent }
+                    contentItem: Item {
+                        Icon { name: "close"; color: Theme.secondary; size: 18; anchors.centerIn: parent }
+                    }
                     onClicked: root.close()
                 }
             }
@@ -125,6 +127,31 @@ Dialog {
                             id: docxRadio
                             checked: true
                             ButtonGroup.group: formatGroup
+                            Layout.preferredWidth: 20
+                            Layout.preferredHeight: 20
+                            padding: 0
+                            indicator: Item {
+                                width: 20
+                                height: 20
+                                implicitWidth: 20
+                                implicitHeight: 20
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: width / 2
+                                    color: "transparent"
+                                    border.width: 2
+                                    border.color: docxRadio.visualFocus ? Theme.accentHover : docxRadio.checked ? Theme.accent : Theme.border
+                                }
+                                Rectangle {
+                                    visible: docxRadio.checked
+                                    anchors.centerIn: parent
+                                    width: 9
+                                    height: 9
+                                    radius: width / 2
+                                    color: Theme.accent
+                                }
+                            }
+                            contentItem: Item {}
                         }
 
                         Text {
@@ -178,6 +205,31 @@ Dialog {
                         RadioButton {
                             id: mdRadio
                             ButtonGroup.group: formatGroup
+                            Layout.preferredWidth: 20
+                            Layout.preferredHeight: 20
+                            padding: 0
+                            indicator: Item {
+                                width: 20
+                                height: 20
+                                implicitWidth: 20
+                                implicitHeight: 20
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: width / 2
+                                    color: "transparent"
+                                    border.width: 2
+                                    border.color: mdRadio.visualFocus ? Theme.accentHover : mdRadio.checked ? Theme.accent : Theme.border
+                                }
+                                Rectangle {
+                                    visible: mdRadio.checked
+                                    anchors.centerIn: parent
+                                    width: 9
+                                    height: 9
+                                    radius: width / 2
+                                    color: Theme.accent
+                                }
+                            }
+                            contentItem: Item {}
                         }
 
                         Text {
@@ -215,6 +267,31 @@ Dialog {
                         RadioButton {
                             id: txtRadio
                             ButtonGroup.group: formatGroup
+                            Layout.preferredWidth: 20
+                            Layout.preferredHeight: 20
+                            padding: 0
+                            indicator: Item {
+                                width: 20
+                                height: 20
+                                implicitWidth: 20
+                                implicitHeight: 20
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: width / 2
+                                    color: "transparent"
+                                    border.width: 2
+                                    border.color: txtRadio.visualFocus ? Theme.accentHover : txtRadio.checked ? Theme.accent : Theme.border
+                                }
+                                Rectangle {
+                                    visible: txtRadio.checked
+                                    anchors.centerIn: parent
+                                    width: 9
+                                    height: 9
+                                    radius: width / 2
+                                    color: Theme.accent
+                                }
+                            }
+                            contentItem: Item {}
                         }
 
                         Text {
@@ -267,7 +344,8 @@ Dialog {
                         text: "取消"
                         color: Theme.secondary
                         font.pixelSize: 12
-                        anchors.centerIn: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                     }
                     onClicked: root.close()
                 }
@@ -276,14 +354,16 @@ Dialog {
                     id: confirmExportButton
                     height: 36
                     background: Rectangle {
-                        color: confirmExportButton.hovered ? Theme.accent : Theme.accent
+                        color: confirmExportButton.hovered ? Theme.accentHover : Theme.accent
                         radius: 6
                     }
-                    contentItem: Row {
-                        anchors.centerIn: parent
-                        spacing: 4
-                        Icon { name: "download"; color: Theme.paper; size: 18; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: "立即导出"; color: "white"; font.bold: true; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+                    contentItem: Item {
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 4
+                            Icon { name: "download"; color: Theme.paper; size: 18; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: "立即导出"; color: "white"; font.bold: true; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+                        }
                     }
                     onClicked: {
                         let fmt = docxRadio.checked ? "docx" : (mdRadio.checked ? "md" : "txt");

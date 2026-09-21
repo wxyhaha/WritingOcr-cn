@@ -125,11 +125,13 @@ Item {
                         border.color: root.isSearchOpen ? Theme.accent : Theme.border
                         radius: 4
                     }
-                    contentItem: Row {
-                        anchors.centerIn: parent
-                        spacing: 4
-                        Icon { name: "search"; size: 18; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: "查找替换"; font.pixelSize: 11; color: root.isSearchOpen ? Theme.accentHover : Theme.secondary; anchors.verticalCenter: parent.verticalCenter }
+                    contentItem: Item {
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 4
+                            Icon { name: "search"; size: 18; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: "查找替换"; font.pixelSize: 11; color: root.isSearchOpen ? Theme.accentHover : Theme.secondary; anchors.verticalCenter: parent.verticalCenter }
+                        }
                     }
                     onClicked: {
                         root.isSearchOpen = !root.isSearchOpen;
@@ -151,12 +153,14 @@ Item {
                         id: decreaseFontButton
                         height: 26
                         width: 26
+                        enabled: root.editorFontSize > 12
                         background: Rectangle {
                             color: decreaseFontButton.hovered ? Theme.surface : "transparent"
                             border.color: Theme.border
                             radius: 4
                         }
-                        contentItem: Text { text: "A-"; font.pixelSize: 10; font.bold: true; color: Theme.secondary; anchors.centerIn: parent }
+                        contentItem: Text { text: "A-"; font.pixelSize: 10; font.bold: true; color: decreaseFontButton.enabled ? Theme.secondary : Theme.muted; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        Accessible.name: "缩小编辑器字号"
                         onClicked: {
                             if (root.editorFontSize > 12) root.editorFontSize -= 1;
                         }
@@ -169,12 +173,14 @@ Item {
                         id: increaseFontButton
                         height: 26
                         width: 26
+                        enabled: root.editorFontSize < 24
                         background: Rectangle {
                             color: increaseFontButton.hovered ? Theme.surface : "transparent"
                             border.color: Theme.border
                             radius: 4
                         }
-                        contentItem: Text { text: "A+"; font.pixelSize: 10; font.bold: true; color: Theme.secondary; anchors.centerIn: parent }
+                        contentItem: Text { text: "A+"; font.pixelSize: 10; font.bold: true; color: increaseFontButton.enabled ? Theme.secondary : Theme.muted; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        Accessible.name: "放大编辑器字号"
                         onClicked: {
                             if (root.editorFontSize < 24) root.editorFontSize += 1;
                         }
@@ -195,11 +201,13 @@ Item {
                         border.color: copyTextButton.hovered ? Theme.accentBorder : Theme.border
                         radius: 6
                     }
-                    contentItem: Row {
-                        anchors.centerIn: parent
-                        spacing: 4
-                        Icon { name: "copy"; size: 18; anchors.verticalCenter: parent.verticalCenter }
-                        Text { visible: root.width >= 440; text: "复制文本"; font.pixelSize: 11; font.bold: true; color: Theme.accentHover; anchors.verticalCenter: parent.verticalCenter }
+                    contentItem: Item {
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 4
+                            Icon { name: "copy"; size: 18; color: copyTextButton.enabled ? Theme.accent : Theme.muted; anchors.verticalCenter: parent.verticalCenter }
+                            Text { visible: root.width >= 440; text: "复制文本"; font.pixelSize: 11; font.bold: true; color: copyTextButton.enabled ? Theme.accentHover : Theme.muted; anchors.verticalCenter: parent.verticalCenter }
+                        }
                     }
                     onClicked: {
                         root.appController.copyToClipboard(textArea.text);
@@ -357,7 +365,7 @@ Item {
                         Layout.preferredWidth: 26
                         enabled: searchBar.matchCount > 0
                         background: Rectangle { color: previousMatchButton.hovered ? Theme.border : Theme.surface; border.color: Theme.border; radius: 4 }
-                        contentItem: Icon { name: "up"; size: 18; color: parent.enabled ? Theme.secondary : Theme.muted; anchors.centerIn: parent }
+                        contentItem: Item { Icon { name: "up"; size: 18; color: previousMatchButton.enabled ? Theme.secondary : Theme.muted; anchors.centerIn: parent } }
                         onClicked: searchBar.prevMatch()
                     }
 
@@ -367,7 +375,7 @@ Item {
                         Layout.preferredWidth: 26
                         enabled: searchBar.matchCount > 0
                         background: Rectangle { color: nextMatchButton.hovered ? Theme.border : Theme.surface; border.color: Theme.border; radius: 4 }
-                        contentItem: Icon { name: "down"; size: 18; color: parent.enabled ? Theme.secondary : Theme.muted; anchors.centerIn: parent }
+                        contentItem: Item { Icon { name: "down"; size: 18; color: nextMatchButton.enabled ? Theme.secondary : Theme.muted; anchors.centerIn: parent } }
                         onClicked: searchBar.nextMatch()
                     }
 
@@ -376,7 +384,7 @@ Item {
                         Layout.preferredHeight: 26
                         Layout.preferredWidth: 26
                         background: Rectangle { color: closeSearchButton.hovered ? "#fee2e2" : "transparent"; radius: 4 }
-                        contentItem: Icon { name: "close"; size: 18; color: Theme.secondary; anchors.centerIn: parent }
+                        contentItem: Item { Icon { name: "close"; size: 18; color: Theme.secondary; anchors.centerIn: parent } }
                         onClicked: root.isSearchOpen = false
                     }
                 }
@@ -412,10 +420,10 @@ Item {
                         enabled: searchBar.matchCount > 0
                         background: Rectangle {
                             color: replaceButton.enabled ? (replaceButton.hovered ? Theme.accentSoft : Theme.accentSoft) : Theme.surface
-                            border.color: parent.enabled ? Theme.accentBorder : Theme.border
+                            border.color: replaceButton.enabled ? Theme.accentBorder : Theme.border
                             radius: 4
                         }
-                        contentItem: Text { text: "替换"; font.pixelSize: 11; font.bold: true; color: parent.enabled ? Theme.accentHover : Theme.muted; anchors.centerIn: parent }
+                        contentItem: Text { text: "替换"; font.pixelSize: 11; font.bold: true; color: replaceButton.enabled ? Theme.accentHover : Theme.muted; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: searchBar.replaceCurrent()
                     }
 
@@ -426,10 +434,10 @@ Item {
                         enabled: searchBar.matchCount > 0
                         background: Rectangle {
                             color: replaceAllButton.enabled ? (replaceAllButton.hovered ? Theme.accentSoft : Theme.accentSoft) : Theme.surface
-                            border.color: parent.enabled ? Theme.accentBorder : Theme.border
+                            border.color: replaceAllButton.enabled ? Theme.accentBorder : Theme.border
                             radius: 4
                         }
-                        contentItem: Text { text: "全部替换"; font.pixelSize: 11; font.bold: true; color: parent.enabled ? Theme.accentHover : Theme.muted; anchors.centerIn: parent }
+                        contentItem: Text { text: "全部替换"; font.pixelSize: 11; font.bold: true; color: replaceAllButton.enabled ? Theme.accentHover : Theme.muted; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: searchBar.replaceAll()
                     }
                 }

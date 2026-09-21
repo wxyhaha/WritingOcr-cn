@@ -86,7 +86,9 @@ Dialog {
                         color: closeConfirmButton.hovered ? Theme.surface : "transparent"
                         radius: 15
                     }
-                    contentItem: Icon { name: "close"; color: Theme.secondary; size: 18; anchors.centerIn: parent }
+                    contentItem: Item {
+                        Icon { name: "close"; color: Theme.secondary; size: 18; anchors.centerIn: parent }
+                    }
                     onClicked: root.close()
                 }
             }
@@ -184,7 +186,8 @@ Dialog {
                         color: Theme.secondary
                         font.pixelSize: 12
                         font.bold: true
-                        anchors.centerIn: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                     }
                     onClicked: root.close()
                 }
@@ -197,11 +200,13 @@ Dialog {
                         color: deleteConfirmButton.hovered ? "#be123c" : "#e11d48"
                         radius: 6
                     }
-                    contentItem: Row {
-                        anchors.centerIn: parent
-                        spacing: 4
-                        Icon { name: "trash"; color: Theme.paper; size: 18; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: "永久删除"; color: "white"; font.bold: true; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+                    contentItem: Item {
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 4
+                            Icon { name: "trash"; color: Theme.paper; size: 18; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: "永久删除"; color: "white"; font.bold: true; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+                        }
                     }
                     onClicked: {
                         root.confirmed(root.targetTaskId);

@@ -261,6 +261,7 @@ ApplicationWindow {
     }
     SettingsDialog {
         id: settingsDialog
+        objectName: "settingsDialog"
         appController: mainWindow.appController
     }
     ExportDialog {

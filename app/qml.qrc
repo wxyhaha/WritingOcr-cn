@@ -14,6 +14,8 @@
         <file>qml/components/Icons.js</file>
         <file>qml/components/Icon.qml</file>
         <file>qml/components/ActionButton.qml</file>
+        <file>qml/components/SelectField.qml</file>
+        <file>qml/components/MenuActionItem.qml</file>
         <file>qml/components/WindowControlButton.qml</file>
         <file>qml/components/WindowResizeHandles.qml</file>
     </qresource>

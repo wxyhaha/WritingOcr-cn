@@ -265,6 +265,8 @@ Item {
         color: "#EB283D32"
         border.color: Theme.secondary
         width: controlsRow.implicitWidth + 24
+        visible: root.imagePath !== "" && imageItem.status !== Image.Error
+        opacity: imageItem.status === Image.Ready ? 1 : 0.55
 
         Row {
             id: controlsRow
@@ -279,7 +281,8 @@ Item {
                     color: zoomOutButton.hovered ? Theme.secondary : "transparent"
                     radius: 13
                 }
-                contentItem: Icon { name: "minus"; color: "white";  size: 18;  }
+                contentItem: Item { Icon { name: "minus"; color: zoomOutButton.enabled ? "white" : Theme.muted; size: 18; anchors.centerIn: parent } }
+                enabled: imageItem.status === Image.Ready
                 onClicked: root.zoom(0.8)
                 ToolTip.visible: hovered
                 ToolTip.text: "缩小"
@@ -302,7 +305,8 @@ Item {
                     color: zoomInButton.hovered ? Theme.secondary : "transparent"
                     radius: 13
                 }
-                contentItem: Icon { name: "plus"; color: "white";  size: 18;  }
+                contentItem: Item { Icon { name: "plus"; color: zoomInButton.enabled ? "white" : Theme.muted; size: 18; anchors.centerIn: parent } }
+                enabled: imageItem.status === Image.Ready
                 onClicked: root.zoom(1.25)
                 ToolTip.visible: hovered
                 ToolTip.text: "放大"
@@ -314,11 +318,12 @@ Item {
             Button {
                 id: fitButton
                 height: 26
+                enabled: imageItem.status === Image.Ready
                 background: Rectangle {
                     color: fitButton.hovered ? Theme.secondary : "transparent"
                     radius: 6
                 }
-                contentItem: Text { text: "适应"; color: Theme.accentBorder; font.pixelSize: 11; anchors.centerIn: parent }
+                contentItem: Text { text: "适应"; color: fitButton.enabled ? Theme.accentBorder : Theme.muted; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: root.fitToWindow()
             }
 
@@ -326,11 +331,12 @@ Item {
                 id: originalSizeButton
                 visible: root.width >= 360
                 height: 26
+                enabled: imageItem.status === Image.Ready
                 background: Rectangle {
                     color: originalSizeButton.hovered ? Theme.secondary : "transparent"
                     radius: 6
                 }
-                contentItem: Text { text: "1:1"; color: Theme.accentBorder; font.pixelSize: 11; anchors.centerIn: parent }
+                contentItem: Text { text: "1:1"; color: originalSizeButton.enabled ? Theme.accentBorder : Theme.muted; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: root.resetOriginalSize()
             }
 
@@ -345,7 +351,8 @@ Item {
                     color: rotateLeftButton.hovered ? Theme.secondary : "transparent"
                     radius: 13
                 }
-                contentItem: Icon { name: "rotateLeft"; color: Theme.accentBorder;  size: 18; anchors.centerIn: parent }
+                contentItem: Item { Icon { name: "rotateLeft"; color: rotateLeftButton.enabled ? Theme.accentBorder : Theme.muted; size: 18; anchors.centerIn: parent } }
+                enabled: imageItem.status === Image.Ready
                 onClicked: root.rotateImage(-90)
                 ToolTip.visible: hovered
                 ToolTip.text: "逆时针旋转 90°"
@@ -360,7 +367,8 @@ Item {
                     color: rotateRightButton.hovered ? Theme.secondary : "transparent"
                     radius: 13
                 }
-                contentItem: Icon { name: "rotateRight"; color: Theme.accentBorder;  size: 18; anchors.centerIn: parent }
+                contentItem: Item { Icon { name: "rotateRight"; color: rotateRightButton.enabled ? Theme.accentBorder : Theme.muted; size: 18; anchors.centerIn: parent } }
+                enabled: imageItem.status === Image.Ready
                 onClicked: root.rotateImage(90)
                 ToolTip.visible: hovered
                 ToolTip.text: "顺时针旋转 90°"

@@ -237,6 +237,28 @@ Item {
                 compare(menu.itemAt(1).text, "识别整篇手稿");
                 menu.close();
             }
+
+            function test_customControlLayout() {
+                let dialog = findChild(preview.contentItem, "settingsDialog");
+                let finishButton = findChild(dialog, "finishSettingsButton");
+                let filterCheck = findChild(preview.contentItem, "filterPrintedCheck");
+                verify(dialog && finishButton && filterCheck);
+
+                dialog.open();
+                tryCompare(dialog, "visible", true);
+                wait(40);
+
+                compare(finishButton.contentItem.horizontalAlignment, Text.AlignHCenter);
+                compare(finishButton.contentItem.verticalAlignment, Text.AlignVCenter);
+                verify(finishButton.contentItem.width > finishButton.contentItem.implicitWidth,
+                       "The settings action label must use the full button content area");
+                verify(filterCheck.indicator.implicitWidth >= 22 && filterCheck.indicator.implicitHeight >= 22,
+                       "The custom checkbox indicator must participate in layout sizing");
+                verify(filterCheck.contentItem.leftPadding >= filterCheck.indicator.width + filterCheck.spacing - 1,
+                       "The checkbox label must not overlap its indicator");
+
+                dialog.close();
+            }
         }
     }
 }
