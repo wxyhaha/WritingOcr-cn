@@ -1,19 +1,27 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Window
 import "pages"
 import "dialogs"
 import "components"
 import "components/Theme.js" as Theme
 
 ApplicationWindow {
-    id: window
+    id: mainWindow
     width: 1280
     height: 840
     minimumWidth: 1020
     minimumHeight: 680
     visible: true
-    title: "手写中文文章数字化工具"
+    title: currentView === "proofread" && appController.taskService.hasCurrentTask
+           ? appController.taskService.currentTaskTitle + " · 手稿" : "手稿 · 手写文章数字化"
+    flags: Qt.Window | Qt.FramelessWindowHint
+
+    function toggleMaximized() {
+        if (visibility === Window.Maximized) showNormal();
+        else showMaximized();
+    }
 
     color: Theme.background
     background: Rectangle { color: Theme.background }
@@ -34,40 +42,69 @@ ApplicationWindow {
     palette.text: Theme.ink
     palette.base: Theme.paper
 
+    WindowResizeHandles {
+        parent: mainWindow.contentItem.parent
+        anchors.fill: parent
+        z: 100
+        targetWindow: mainWindow
+    }
+
+    Rectangle {
+        parent: mainWindow.contentItem.parent
+        anchors.fill: parent
+        z: 99
+        color: "transparent"
+        border.width: mainWindow.visibility === Window.Maximized ? 0 : 1
+        border.color: Theme.border
+    }
+
     header: Rectangle {
-        height: window.currentView === "home" ? 68 : 52
+        objectName: "windowTitleBar"
+        height: 60
         color: Theme.paper
+        MouseArea {
+            objectName: "titleBarDragArea"
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+            property point pressPosition
+            onPressed: (mouse) => { pressPosition = Qt.point(mouse.x, mouse.y); }
+            onPositionChanged: (mouse) => {
+                if (pressed && (Math.abs(mouse.x - pressPosition.x) > 6 || Math.abs(mouse.y - pressPosition.y) > 6))
+                    mainWindow.startSystemMove();
+            }
+            onDoubleClicked: mainWindow.toggleMaximized()
+        }
         Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.border }
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 28
-            anchors.rightMargin: 24
+            anchors.rightMargin: 10
             spacing: 12
             Icon { name: "edit"; size: 24; color: Theme.accent }
             Text { text: "手稿"; font.pixelSize: 20; font.bold: true; color: Theme.ink }
             Text {
-                text: window.currentView === "home" ? "让纸上的文字，留下来。" : "校对工作台"
+                text: mainWindow.currentView === "home" ? "让纸上的文字，留下来。" : "校对工作台"
                 font.pixelSize: 12
                 color: Theme.muted
                 Layout.leftMargin: 8
             }
             Item { Layout.fillWidth: true }
             ActionButton {
-                visible: window.currentView === "home" && window.appController.taskService.hasCurrentTask
+                visible: mainWindow.currentView === "home" && mainWindow.appController.taskService.hasCurrentTask
                 text: "继续校对"
                 iconName: "edit"
                 quiet: true
-                onClicked: window.currentView = "proofread"
+                onClicked: mainWindow.currentView = "proofread"
             }
             Row {
                 spacing: 7
                 Rectangle {
                     width: 6; height: 6; radius: 3
                     anchors.verticalCenter: parent.verticalCenter
-                    color: window.appController.ocrService.isWorkerRunning ? Theme.accent : Theme.warning
+                    color: mainWindow.appController.ocrService.isWorkerRunning ? Theme.accent : Theme.warning
                 }
                 Text {
-                    text: window.appController.ocrService.isWorkerRunning ? "本地识别就绪" : (window.workerStarting ? "识别引擎启动中" : "识别引擎未就绪")
+                    text: mainWindow.appController.ocrService.isWorkerRunning ? "本地识别就绪" : (mainWindow.workerStarting ? "识别引擎启动中" : "识别引擎未就绪")
                     font.pixelSize: 12; color: Theme.secondary
                 }
             }
@@ -77,6 +114,35 @@ ApplicationWindow {
                 ToolTip.text: "设置与识别引擎状态"
                 onClicked: settingsDialog.open()
             }
+            Rectangle {
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: 20
+                Layout.leftMargin: 4
+                Layout.rightMargin: 4
+                color: Theme.border
+            }
+            Row {
+                spacing: 2
+                WindowControlButton {
+                    objectName: "minimizeWindowButton"
+                    text: "最小化"
+                    iconName: "minus"
+                    onClicked: mainWindow.showMinimized()
+                }
+                WindowControlButton {
+                    objectName: "maximizeWindowButton"
+                    text: mainWindow.visibility === Window.Maximized ? "还原" : "最大化"
+                    iconName: mainWindow.visibility === Window.Maximized ? "restore" : "maximize"
+                    onClicked: mainWindow.toggleMaximized()
+                }
+                WindowControlButton {
+                    objectName: "closeWindowButton"
+                    text: "关闭"
+                    iconName: "close"
+                    destructive: true
+                    onClicked: mainWindow.close()
+                }
+            }
         }
     }
 
@@ -84,13 +150,13 @@ ApplicationWindow {
     StackLayout {
         id: stackLayout
         anchors.fill: parent
-        currentIndex: window.currentView === "home" ? 0 : 1
+        currentIndex: mainWindow.currentView === "home" ? 0 : 1
 
         TaskHomeView {
             id: homeView
-            appController: window.appController
+            appController: mainWindow.appController
             onOpenTaskRequested: (taskId) => {
-                window.currentView = "proofread";
+                mainWindow.currentView = "proofread";
             }
             onScanQrRequested: qrCodeDialog.open()
             onExportTaskRequested: (taskId) => {
@@ -107,8 +173,8 @@ ApplicationWindow {
 
         ProofreadingView {
             id: proofreadView
-            appController: window.appController
-            onBackToHomeRequested: window.currentView = "home"
+            appController: mainWindow.appController
+            onBackToHomeRequested: mainWindow.currentView = "home"
             onScanQrRequested: qrCodeDialog.open()
             onExportRequested: {
                 exportDialog.targetTaskId = "";
@@ -172,33 +238,33 @@ ApplicationWindow {
     }
 
     Connections {
-        target: window.appController
+        target: mainWindow.appController
         function onNotifyUser(msg, type) {
             toast.show(msg, type);
         }
         function onNavigateToProofreading() {
             qrCodeDialog.close();
-            window.currentView = "proofread";
+            mainWindow.currentView = "proofread";
         }
     }
 
     // Dialog Instances
     QrCodeDialog {
         id: qrCodeDialog
-        appController: window.appController
+        appController: mainWindow.appController
     }
     ConfirmDialog {
         id: confirmDialog
         onConfirmed: (taskId) => {
-            window.appController.taskService.deleteTask(taskId);
+            mainWindow.appController.taskService.deleteTask(taskId);
         }
     }
     SettingsDialog {
         id: settingsDialog
-        appController: window.appController
+        appController: mainWindow.appController
     }
     ExportDialog {
         id: exportDialog
-        appController: window.appController
+        appController: mainWindow.appController
     }
 }

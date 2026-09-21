@@ -153,11 +153,39 @@ Item {
             when: windowShown
 
             function init() {
+                preview.showNormal();
                 preview.width = 1280;
                 preview.height = 840;
                 preview.currentView = "proofread";
                 findChild(preview.contentItem, "proofreadingView").pagesVisible = true;
                 wait(80);
+            }
+
+            function test_windowTitleBar() {
+                verify((preview.flags & Qt.FramelessWindowHint) !== 0);
+                let surface = preview.contentItem.parent;
+                let maximize = findChild(surface, "maximizeWindowButton");
+                let minimize = findChild(surface, "minimizeWindowButton");
+                let close = findChild(surface, "closeWindowButton");
+                let resize = findChild(surface, "windowResizeHandles");
+                verify(maximize && minimize && close && resize);
+                compare(close.iconName, "close");
+                compare(close.text, "关闭");
+                verify(resize.visible);
+                mouseClick(maximize);
+                tryCompare(preview, "visibility", Window.Maximized);
+                tryCompare(maximize, "iconName", "restore");
+                tryCompare(resize, "visible", false);
+                mouseClick(maximize);
+                tryCompare(preview, "visibility", Window.Windowed);
+                tryCompare(maximize, "iconName", "maximize");
+                let dragArea = findChild(surface, "titleBarDragArea");
+                mouseDoubleClickSequence(dragArea, 400, 25);
+                tryCompare(preview, "visibility", Window.Maximized);
+                preview.showNormal();
+                mouseClick(minimize);
+                tryCompare(preview, "visibility", Window.Minimized);
+                preview.showNormal();
             }
 
             function test_svgIconsAndCompactLayout() {

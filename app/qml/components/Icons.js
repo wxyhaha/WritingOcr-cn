@@ -1,5 +1,7 @@
 .pragma library
 var paths = {
+  "maximize": "<rect x=\"5\" y=\"5\" width=\"14\" height=\"14\" rx=\"1\"/>",
+  "restore": "<rect x=\"4\" y=\"8\" width=\"12\" height=\"12\" rx=\"1\"/><path d=\"M8 8V4h12v12h-4\"/>",
   "document": "<path d=\"M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z\"/><path d=\"M14 3v6h6M8 13h8M8 17h5\"/>",
   "edit": "<path d=\"m15 4 5 5M4 20l5-1L20 8a2 2 0 0 0-5-5L4 14z\"/>",
   "folder": "<path d=\"M3 7a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v9H3z\"/>",
