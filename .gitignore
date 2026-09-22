@@ -43,6 +43,7 @@ venv/
 env/
 *.egg-info/
 dist/
+release/
 
 # Test data & temporary files
 test_data/

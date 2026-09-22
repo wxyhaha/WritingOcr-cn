@@ -69,6 +69,37 @@ ctest --test-dir build/release --output-on-failure
 
 ---
 
+## 📦 正式发布
+
+正式发布不直接分发 `dist/HandwritingOCR/`，而是使用发布脚本生成安装包。脚本会在构建机上完成以下工作：
+
+- 打包官方 Python 3.13.4 嵌入式运行时；
+- 安装锁定的 PaddlePaddle / PaddleOCR / PaddleX 依赖；
+- 预下载 PP-OCRv5 模型缓存；
+- 携带 VC++ 运行库、发布诊断工具和局域网端口配置；
+- 使用 Inno Setup 生成 Windows 安装程序。
+
+在已经配置好 Qt、Visual Studio 和 CMake 的构建机上执行：
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File .\scripts\build_release.ps1
+```
+
+产物位于 `release/`：
+
+- `release/installer/HandwritingOCR-Setup-1.0.0.exe`：推荐给最终用户；
+- `release/HandwritingOCR/`：便携运行目录，包含 `release-launch.bat` 和 `diagnose-release.bat`。
+
+发布包目标为 Windows 10/11 64 位。最终用户不需要安装 Qt、Visual Studio、Python 或 PaddleOCR；安装程序会配置 VC++ 运行库和局域网上传端口。发布构建机需要联网下载 Python、Python 依赖和模型，完成后目标电脑可离线启动 OCR。
+
+发布目录不会提交到 Git，重新发布时直接重跑上述脚本即可。若需要验证发布目录中的 OCR Worker：
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File .\scripts\verify_release.ps1
+```
+
+---
+
 ### 4. 第三步：启动程序
 直接在项目根目录下双击运行批处理脚本：
 ```powershell

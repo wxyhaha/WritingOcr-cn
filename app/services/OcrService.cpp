@@ -176,6 +176,15 @@ void OcrService::startWorkerProcess() {
     environment.insert("OCR_HOST", "127.0.0.1");
     environment.insert("OCR_TOKEN", m_workerAuthToken);
     environment.insert("OCR_ALLOWED_ROOTS", QDir(StorageService::instance().getBaseStorageDir()).filePath("tasks"));
+
+    // A release package carries the PaddleX model cache beside the embedded
+    // Python runtime. Point the worker at it so a fresh installation does not
+    // fall back to a machine-specific cache under the developer's profile.
+    const QString bundledModelCache = PathUtils::findResourcePath("runtime/models/paddlex");
+    if (QDir(bundledModelCache).exists()) {
+        environment.insert("PADDLE_PDX_CACHE_HOME", bundledModelCache);
+    }
+
     m_workerProcess->setProcessEnvironment(environment);
 
     Logger::instance().info("OcrService", QString("Launching OCR worker via %1 in %2: %3").arg(pythonExe, scriptDir, scriptPath));
